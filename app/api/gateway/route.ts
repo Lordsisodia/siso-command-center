@@ -6,15 +6,43 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
+const LEGACY_STATE_DIRNAME = ".clawdbot";
+const NEW_STATE_DIRNAME = ".moltbot";
+const CONFIG_FILENAME = "moltbot.json";
+
+const resolveUserPath = (input: string) => {
+  const trimmed = input.trim();
+  if (!trimmed) return trimmed;
+  if (trimmed.startsWith("~")) {
+    const expanded = trimmed.replace(/^~(?=$|[\\/])/, os.homedir());
+    return path.resolve(expanded);
+  }
+  return path.resolve(trimmed);
+};
+
 const resolveStateDir = () => {
-  const raw = process.env.CLAWDBOT_STATE_DIR ?? path.join(os.homedir(), ".clawdbot");
-  if (raw === "~") {
-    return os.homedir();
+  const raw = process.env.MOLTBOT_STATE_DIR ?? process.env.CLAWDBOT_STATE_DIR;
+  if (raw?.trim()) {
+    return resolveUserPath(raw);
   }
-  if (raw.startsWith("~/")) {
-    return path.join(os.homedir(), raw.slice(2));
+  return path.join(os.homedir(), LEGACY_STATE_DIRNAME);
+};
+
+const resolveConfigPathCandidates = () => {
+  const explicit = process.env.MOLTBOT_CONFIG_PATH ?? process.env.CLAWDBOT_CONFIG_PATH;
+  if (explicit?.trim()) {
+    return [resolveUserPath(explicit)];
   }
-  return raw;
+  const candidates: string[] = [];
+  if (process.env.MOLTBOT_STATE_DIR?.trim()) {
+    candidates.push(path.join(resolveUserPath(process.env.MOLTBOT_STATE_DIR), CONFIG_FILENAME));
+  }
+  if (process.env.CLAWDBOT_STATE_DIR?.trim()) {
+    candidates.push(path.join(resolveUserPath(process.env.CLAWDBOT_STATE_DIR), CONFIG_FILENAME));
+  }
+  candidates.push(path.join(os.homedir(), NEW_STATE_DIRNAME, CONFIG_FILENAME));
+  candidates.push(path.join(os.homedir(), LEGACY_STATE_DIRNAME, CONFIG_FILENAME));
+  return candidates;
 };
 
 const parseJsonLoose = (raw: string) => {
@@ -44,8 +72,9 @@ const resolveGatewayToken = (config: Record<string, unknown>) => {
 
 export async function GET() {
   try {
-    const stateDir = resolveStateDir();
-    const configPath = path.join(stateDir, "clawdbot.json");
+    const candidates = resolveConfigPathCandidates();
+    const fallbackPath = path.join(resolveStateDir(), CONFIG_FILENAME);
+    const configPath = candidates.find((candidate) => fs.existsSync(candidate)) ?? fallbackPath;
     if (!fs.existsSync(configPath)) {
       return NextResponse.json(
         { error: `Missing config at ${configPath}.` },

@@ -5,7 +5,7 @@ export const slugifyProjectName = (name: string): string => {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
   if (!slug) {
-    throw new Error("Project name produced an empty folder name.");
+    throw new Error("Workspace name produced an empty folder name.");
   }
   return slug;
 };

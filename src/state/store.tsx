@@ -280,7 +280,7 @@ export const AgentCanvasProvider = ({ children }: { children: ReactNode }) => {
       const store = await fetchProjectsStore();
       dispatch({ type: "loadStore", store });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load projects.";
+      const message = err instanceof Error ? err.message : "Failed to load workspaces.";
       dispatch({ type: "setError", error: message });
     }
   }, []);
@@ -326,7 +326,7 @@ export const AgentCanvasProvider = ({ children }: { children: ReactNode }) => {
       dispatch({ type: "loadStore", store: result.store });
       return { warnings: result.warnings };
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to create project.";
+      const message = err instanceof Error ? err.message : "Failed to create workspace.";
       dispatch({ type: "setError", error: message });
       return null;
     }
@@ -338,7 +338,7 @@ export const AgentCanvasProvider = ({ children }: { children: ReactNode }) => {
       dispatch({ type: "loadStore", store: result.store });
       return { warnings: result.warnings };
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to open project.";
+      const message = err instanceof Error ? err.message : "Failed to open workspace.";
       dispatch({ type: "setError", error: message });
       return null;
     }
@@ -350,7 +350,7 @@ export const AgentCanvasProvider = ({ children }: { children: ReactNode }) => {
       dispatch({ type: "loadStore", store: result.store });
       return { warnings: result.warnings };
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to delete project.";
+      const message = err instanceof Error ? err.message : "Failed to delete workspace.";
       dispatch({ type: "setError", error: message });
       return null;
     }

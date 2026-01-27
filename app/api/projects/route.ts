@@ -36,7 +36,7 @@ export async function GET() {
     const store = normalizeProjectsStore(loadStore());
     return NextResponse.json(store);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to load projects.";
+    const message = err instanceof Error ? err.message : "Failed to load workspaces.";
     console.error(message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     const name = typeof body?.name === "string" ? body.name.trim() : "";
 
     if (!name) {
-      return NextResponse.json({ error: "Project name is required." }, { status: 400 });
+      return NextResponse.json({ error: "Workspace name is required." }, { status: 400 });
     }
 
     let slug = "";
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       slug = slugifyProjectName(name);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Project name produced an empty folder name.";
+        err instanceof Error ? err.message : "Workspace name produced an empty folder name.";
       return NextResponse.json({ error: message }, { status: 400 });
     }
 
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
     saveStore(nextStore);
 
     if (warnings.length > 0) {
-      console.warn(`Project created with warnings: ${warnings.join(" ")}`);
+      console.warn(`Workspace created with warnings: ${warnings.join(" ")}`);
     }
 
     const result: ProjectCreateResult = {
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to create project.";
+    const message = err instanceof Error ? err.message : "Failed to create workspace.";
     console.error(message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -104,13 +104,13 @@ export async function PUT(request: Request) {
   try {
     const body = (await request.json()) as ProjectsStore;
     if (!body || !Array.isArray(body.projects)) {
-      return NextResponse.json({ error: "Invalid projects payload." }, { status: 400 });
+      return NextResponse.json({ error: "Invalid workspaces payload." }, { status: 400 });
     }
     const normalized = normalizeProjectsStore(body);
     saveStore(normalized);
     return NextResponse.json(normalized);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to save projects.";
+    const message = err instanceof Error ? err.message : "Failed to save workspaces.";
     console.error(message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -128,6 +128,6 @@ const resolveProjectPath = (slug: string): { repoPath: string; warnings: string[
     candidate = path.join(os.homedir(), `${slug}-${suffix}`);
     suffix += 1;
   }
-  warnings.push(`Project folder already exists. Created ${candidate} instead.`);
+  warnings.push(`Workspace folder already exists. Created ${candidate} instead.`);
   return { repoPath: candidate, warnings };
 };

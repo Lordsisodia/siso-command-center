@@ -5,6 +5,14 @@ import os from "node:os";
 import path from "node:path";
 
 import type { ProjectTileRenamePayload } from "../../../../../../src/lib/projects/types";
+import { resolveAgentWorkspaceDir } from "../../../../../../src/lib/projects/agentWorkspace";
+import {
+  loadClawdbotConfig,
+  removeAgentEntry,
+  renameAgentEntry,
+  saveClawdbotConfig,
+  upsertAgentEntry,
+} from "../../../../../../src/lib/clawdbot/config";
 import { generateAgentId } from "../../../../../../src/lib/ids/agentId";
 import { loadStore, saveStore } from "../../../store";
 
@@ -20,14 +28,14 @@ export async function DELETE(
     const trimmedTileId = tileId.trim();
     if (!trimmedProjectId || !trimmedTileId) {
       return NextResponse.json(
-        { error: "Project id and tile id are required." },
+        { error: "Workspace id and tile id are required." },
         { status: 400 }
       );
     }
     const store = loadStore();
     const project = store.projects.find((entry) => entry.id === trimmedProjectId);
     if (!project) {
-      return NextResponse.json({ error: "Project not found." }, { status: 404 });
+      return NextResponse.json({ error: "Workspace not found." }, { status: 404 });
     }
     const tile = project.tiles.find((entry) => entry.id === trimmedTileId);
     if (!tile) {
@@ -38,7 +46,18 @@ export async function DELETE(
     if (!tile.agentId?.trim()) {
       warnings.push(`Missing agentId for tile ${tile.id}; skipped agent cleanup.`);
     } else {
-      deleteAgentArtifacts(tile.agentId, warnings);
+      deleteAgentArtifacts(trimmedProjectId, tile.agentId, warnings);
+      try {
+        const { config, configPath } = loadClawdbotConfig();
+        const changed = removeAgentEntry(config, tile.agentId);
+        if (changed) {
+          saveClawdbotConfig(configPath, config);
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Failed to update clawdbot.json.";
+        warnings.push(`Agent config not updated: ${message}`);
+      }
     }
 
     const nextTiles = project.tiles.filter((entry) => entry.id !== trimmedTileId);
@@ -73,7 +92,7 @@ export async function PATCH(
     const trimmedTileId = tileId.trim();
     if (!trimmedProjectId || !trimmedTileId) {
       return NextResponse.json(
-        { error: "Project id and tile id are required." },
+        { error: "Workspace id and tile id are required." },
         { status: 400 }
       );
     }
@@ -86,7 +105,7 @@ export async function PATCH(
     const store = loadStore();
     const project = store.projects.find((entry) => entry.id === trimmedProjectId);
     if (!project) {
-      return NextResponse.json({ error: "Project not found." }, { status: 404 });
+      return NextResponse.json({ error: "Workspace not found." }, { status: 404 });
     }
     const tile = project.tiles.find((entry) => entry.id === trimmedTileId);
     if (!tile) {
@@ -116,8 +135,8 @@ export async function PATCH(
     if (tile.agentId !== nextAgentId) {
       const stateDirRaw = process.env.CLAWDBOT_STATE_DIR ?? "~/.clawdbot";
       const stateDir = resolveHomePath(stateDirRaw);
-      const workspaceSource = path.join(os.homedir(), `clawd-${tile.agentId}`);
-      const workspaceTarget = path.join(os.homedir(), `clawd-${nextAgentId}`);
+      const workspaceSource = resolveAgentWorkspaceDir(trimmedProjectId, tile.agentId);
+      const workspaceTarget = resolveAgentWorkspaceDir(trimmedProjectId, nextAgentId);
       const agentSource = path.join(stateDir, "agents", tile.agentId);
       const agentTarget = path.join(stateDir, "agents", nextAgentId);
       if (fs.existsSync(workspaceTarget)) {
@@ -140,6 +159,30 @@ export async function PATCH(
         warnings,
         { warnIfMissing: false }
       );
+    }
+    const nextWorkspaceDir = resolveAgentWorkspaceDir(trimmedProjectId, nextAgentId);
+    try {
+      const { config, configPath } = loadClawdbotConfig();
+      const changed =
+        tile.agentId !== nextAgentId
+          ? renameAgentEntry(config, {
+              fromAgentId: tile.agentId,
+              toAgentId: nextAgentId,
+              agentName: name,
+              workspaceDir: nextWorkspaceDir,
+            })
+          : upsertAgentEntry(config, {
+              agentId: nextAgentId,
+              agentName: name,
+              workspaceDir: nextWorkspaceDir,
+            });
+      if (changed) {
+        saveClawdbotConfig(configPath, config);
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to update clawdbot.json.";
+      warnings.push(`Agent config not updated: ${message}`);
     }
 
     const nextTiles = project.tiles.map((entry) =>
@@ -215,8 +258,8 @@ const deleteDirIfExists = (targetPath: string, label: string, warnings: string[]
   fs.rmSync(targetPath, { recursive: true, force: false });
 };
 
-const deleteAgentArtifacts = (agentId: string, warnings: string[]) => {
-  const workspaceDir = path.join(os.homedir(), `clawd-${agentId}`);
+const deleteAgentArtifacts = (projectId: string, agentId: string, warnings: string[]) => {
+  const workspaceDir = resolveAgentWorkspaceDir(projectId, agentId);
   deleteDirIfExists(workspaceDir, "Agent workspace", warnings);
 
   const stateDirRaw = process.env.CLAWDBOT_STATE_DIR ?? "~/.clawdbot";

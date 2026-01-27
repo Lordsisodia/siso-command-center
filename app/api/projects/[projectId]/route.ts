@@ -4,6 +4,12 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import {
+  loadClawdbotConfig,
+  removeAgentEntry,
+  saveClawdbotConfig,
+} from "../../../../src/lib/clawdbot/config";
+import { resolveAgentWorkspaceDir } from "../../../../src/lib/projects/agentWorkspace";
 import { loadStore, saveStore } from "../store";
 
 export const runtime = "nodejs";
@@ -16,21 +22,35 @@ export async function DELETE(
     const { projectId } = await context.params;
     const trimmedProjectId = projectId.trim();
     if (!trimmedProjectId) {
-      return NextResponse.json({ error: "Project id is required." }, { status: 400 });
+      return NextResponse.json({ error: "Workspace id is required." }, { status: 400 });
     }
     const store = loadStore();
     const project = store.projects.find((entry) => entry.id === trimmedProjectId);
     if (!project) {
-      return NextResponse.json({ error: "Project not found." }, { status: 404 });
+      return NextResponse.json({ error: "Workspace not found." }, { status: 404 });
     }
 
     const warnings: string[] = [];
+    let configInfo: { config: Record<string, unknown>; configPath: string } | null = null;
+    try {
+      configInfo = loadClawdbotConfig();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to update clawdbot.json.";
+      warnings.push(`Agent config not updated: ${message}`);
+    }
     for (const tile of project.tiles) {
       if (!tile.agentId?.trim()) {
         warnings.push(`Missing agentId for tile ${tile.id}; skipped agent cleanup.`);
         continue;
       }
-      deleteAgentArtifacts(tile.agentId, warnings);
+      deleteAgentArtifacts(trimmedProjectId, tile.agentId, warnings);
+      if (configInfo) {
+        removeAgentEntry(configInfo.config, tile.agentId);
+      }
+    }
+    if (configInfo) {
+      saveClawdbotConfig(configInfo.configPath, configInfo.config);
     }
 
     const projects = store.projects.filter((project) => project.id !== trimmedProjectId);
@@ -46,7 +66,7 @@ export async function DELETE(
     saveStore(nextStore);
     return NextResponse.json({ store: nextStore, warnings });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to delete project.";
+    const message = err instanceof Error ? err.message : "Failed to delete workspace.";
     console.error(message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -74,8 +94,8 @@ const deleteDirIfExists = (targetPath: string, label: string, warnings: string[]
   fs.rmSync(targetPath, { recursive: true, force: false });
 };
 
-const deleteAgentArtifacts = (agentId: string, warnings: string[]) => {
-  const workspaceDir = path.join(os.homedir(), `clawd-${agentId}`);
+const deleteAgentArtifacts = (projectId: string, agentId: string, warnings: string[]) => {
+  const workspaceDir = resolveAgentWorkspaceDir(projectId, agentId);
   deleteDirIfExists(workspaceDir, "Agent workspace", warnings);
 
   const stateDirRaw = process.env.CLAWDBOT_STATE_DIR ?? "~/.clawdbot";

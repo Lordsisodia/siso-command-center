@@ -12,6 +12,12 @@ import type {
   ProjectTileRole,
   ProjectsStore,
 } from "../../../../../src/lib/projects/types";
+import { resolveAgentWorkspaceDir } from "../../../../../src/lib/projects/agentWorkspace";
+import {
+  loadClawdbotConfig,
+  saveClawdbotConfig,
+  upsertAgentEntry,
+} from "../../../../../src/lib/clawdbot/config";
 import { generateAgentId } from "../../../../../src/lib/ids/agentId";
 import { loadStore, saveStore } from "../../store";
 
@@ -40,15 +46,20 @@ const ensureDir = (dir: string) => {
   fs.mkdirSync(dir, { recursive: true });
 };
 
-const buildBootstrapContent = (repoPath: string, role: ProjectTileRole) => {
+const buildBootstrapContent = (
+  repoPath: string,
+  workspaceDir: string,
+  role: ProjectTileRole
+) => {
   return [
     "# BOOTSTRAP.md",
     "",
-    `Project repo: ${repoPath}`,
+    `Workspace dir: ${workspaceDir}`,
+    `Workspace repo: ${repoPath}`,
     `Role: ${role}`,
     "",
-    "You are operating inside this project. Prefer working in ./repo (symlink) when it exists.",
-    `If ./repo does not exist, operate directly in: ${repoPath}`,
+    "You are operating inside this workspace.",
+    `Operate directly in: ${repoPath}`,
     "",
     'First action: run "ls" in the repo to confirm access.',
     "",
@@ -63,33 +74,27 @@ const ensureFile = (filePath: string, contents: string) => {
 };
 
 const provisionWorkspace = ({
-  agentId,
+  workspaceDir,
   repoPath,
   role,
 }: {
-  agentId: string;
+  workspaceDir: string;
   repoPath: string;
   role: ProjectTileRole;
 }): string[] => {
   const warnings: string[] = [];
-  const workspaceDir = path.join(os.homedir(), `clawd-${agentId}`);
   ensureDir(workspaceDir);
 
-  const repoLink = path.join(workspaceDir, "repo");
-  if (!fs.existsSync(repoLink)) {
-    try {
-      fs.symlinkSync(repoPath, repoLink, "dir");
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to create repo symlink.";
-      warnings.push(`Repo symlink not created: ${message}`);
-    }
-  }
-
-  const bootstrapContent = buildBootstrapContent(repoPath, role);
+  const bootstrapContent = buildBootstrapContent(repoPath, workspaceDir, role);
   ensureFile(path.join(workspaceDir, "BOOTSTRAP.md"), bootstrapContent);
   ensureFile(path.join(workspaceDir, "AGENTS.md"), "");
   ensureFile(path.join(workspaceDir, "SOUL.md"), "");
+  ensureFile(path.join(workspaceDir, "IDENTITY.md"), "");
+  ensureFile(path.join(workspaceDir, "USER.md"), "");
+  ensureFile(path.join(workspaceDir, "HEARTBEAT.md"), "");
+  ensureFile(path.join(workspaceDir, "TOOLS.md"), "");
+  ensureFile(path.join(workspaceDir, "MEMORY.md"), "");
+  ensureDir(path.join(workspaceDir, "memory"));
 
   return warnings;
 };
@@ -142,7 +147,7 @@ export async function POST(
     const { projectId } = await context.params;
     const trimmedProjectId = projectId.trim();
     if (!trimmedProjectId) {
-      return NextResponse.json({ error: "Project id is required." }, { status: 400 });
+      return NextResponse.json({ error: "Workspace id is required." }, { status: 400 });
     }
 
     const body = (await request.json()) as ProjectTileCreatePayload;
@@ -158,7 +163,7 @@ export async function POST(
     const store = loadStore();
     const project = store.projects.find((entry) => entry.id === trimmedProjectId);
     if (!project) {
-      return NextResponse.json({ error: "Project not found." }, { status: 404 });
+      return NextResponse.json({ error: "Workspace not found." }, { status: 404 });
     }
 
     const tileId = randomUUID();
@@ -178,6 +183,7 @@ export async function POST(
     }
     const sessionKey = `agent:${agentId}:main`;
     const offset = project.tiles.length * 36;
+    const workspaceDir = resolveAgentWorkspaceDir(trimmedProjectId, agentId);
     const tile: ProjectTile = {
       id: tileId,
       name,
@@ -194,9 +200,24 @@ export async function POST(
     saveStore(nextStore);
 
     const warnings = [
-      ...provisionWorkspace({ agentId, repoPath: project.repoPath, role }),
+      ...provisionWorkspace({ workspaceDir, repoPath: project.repoPath, role }),
       ...copyAuthProfiles(agentId),
     ];
+    try {
+      const { config, configPath } = loadClawdbotConfig();
+      const changed = upsertAgentEntry(config, {
+        agentId,
+        agentName: name,
+        workspaceDir,
+      });
+      if (changed) {
+        saveClawdbotConfig(configPath, config);
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to update clawdbot.json.";
+      warnings.push(`Agent config not updated: ${message}`);
+    }
     if (warnings.length > 0) {
       console.warn(`Tile created with warnings: ${warnings.join(" ")}`);
     }

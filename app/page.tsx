@@ -23,12 +23,30 @@ type ChatEventPayload = {
   errorMessage?: string;
 };
 
-const PROJECT_PROMPT_RE = /^Project path:[\s\S]*?repository\.\s*/i;
+type AgentEventPayload = {
+  runId: string;
+  seq?: number;
+  stream?: string;
+  data?: Record<string, unknown>;
+  sessionKey?: string;
+};
+
+const PROJECT_PROMPT_BLOCK_RE = /^(?:Project|Workspace) path:[\s\S]*?\n\s*\n/i;
+const PROJECT_PROMPT_INLINE_RE = /^(?:Project|Workspace) path:[\s\S]*?memory_search\.\s*/i;
+const RESET_PROMPT_RE =
+  /^A new session was started via \/new or \/reset[\s\S]*?reasoning\.\s*/i;
 const MESSAGE_ID_RE = /\s*\[message_id:[^\]]+\]\s*/gi;
+const UI_METADATA_PREFIX_RE =
+  /^(?:Project path:|Workspace path:|A new session was started via \/new or \/reset)/i;
 
 const stripUiMetadata = (text: string) => {
   if (!text) return text;
-  let cleaned = text.replace(PROJECT_PROMPT_RE, "");
+  let cleaned = text.replace(RESET_PROMPT_RE, "");
+  const beforeProjectStrip = cleaned;
+  cleaned = cleaned.replace(PROJECT_PROMPT_INLINE_RE, "");
+  if (cleaned === beforeProjectStrip) {
+    cleaned = cleaned.replace(PROJECT_PROMPT_BLOCK_RE, "");
+  }
   cleaned = cleaned.replace(MESSAGE_ID_RE, "").trim();
   return cleaned;
 };
@@ -68,12 +86,40 @@ const buildHistoryLines = (messages: ChatHistoryMessage[]) => {
   return { lines: deduped, lastAssistant, lastRole };
 };
 
+const mergeHistoryWithPending = (historyLines: string[], currentLines: string[]) => {
+  if (currentLines.length === 0) return historyLines;
+  if (historyLines.length === 0) return historyLines;
+  const merged = [...historyLines];
+  let cursor = 0;
+  for (const line of currentLines) {
+    let foundIndex = -1;
+    for (let i = cursor; i < merged.length; i += 1) {
+      if (merged[i] === line) {
+        foundIndex = i;
+        break;
+      }
+    }
+    if (foundIndex !== -1) {
+      cursor = foundIndex + 1;
+      continue;
+    }
+    if (line.startsWith("> ")) {
+      merged.splice(cursor, 0, line);
+      cursor += 1;
+    }
+  }
+  return merged;
+};
+
 const buildProjectMessage = (project: ProjectRuntime | null, message: string) => {
   const trimmed = message.trim();
   if (!project || !project.repoPath.trim()) {
     return trimmed;
   }
-  return `Project path: ${project.repoPath}. Operate only within this repository.\n\n${trimmed}`;
+  if (trimmed.startsWith("/")) {
+    return trimmed;
+  }
+  return `Workspace path: ${project.repoPath}. Operate within this repository. You may also read/write your agent workspace files (IDENTITY.md, USER.md, HEARTBEAT.md, TOOLS.md, MEMORY.md). Use MEMORY.md or memory/*.md directly for durable memory; do not rely on memory_search.\n\n${trimmed}`;
 };
 
 const findTileBySessionKey = (
@@ -82,6 +128,19 @@ const findTileBySessionKey = (
 ): { projectId: string; tileId: string } | null => {
   for (const project of projects) {
     const tile = project.tiles.find((entry) => entry.sessionKey === sessionKey);
+    if (tile) {
+      return { projectId: project.id, tileId: tile.id };
+    }
+  }
+  return null;
+};
+
+const findTileByRunId = (
+  projects: ProjectRuntime[],
+  runId: string
+): { projectId: string; tileId: string } | null => {
+  for (const project of projects) {
+    const tile = project.tiles.find((entry) => entry.runId === runId);
     if (tile) {
       return { projectId: project.id, tileId: tile.id };
     }
@@ -148,11 +207,12 @@ const AgentCanvasPage = () => {
         );
         if (lines.length === 0) return;
         const currentLines = tile.outputLines;
+        const mergedLines = mergeHistoryWithPending(lines, currentLines);
         const isSame =
-          lines.length === currentLines.length &&
-          lines.every((line, index) => line === currentLines[index]);
+          mergedLines.length === currentLines.length &&
+          mergedLines.every((line, index) => line === currentLines[index]);
         if (isSame) {
-          if (tile.status === "running" && lastRole === "assistant") {
+          if (!tile.runId && tile.status === "running" && lastRole === "assistant") {
             dispatch({
               type: "updateTile",
               projectId,
@@ -163,10 +223,10 @@ const AgentCanvasPage = () => {
           return;
         }
         const patch: Partial<AgentTile> = {
-          outputLines: lines,
+          outputLines: mergedLines,
           lastResult: lastAssistant ?? null,
         };
-        if (tile.status === "running" && lastRole === "assistant") {
+        if (!tile.runId && tile.status === "running" && lastRole === "assistant") {
           patch.status = "idle";
           patch.runId = null;
           patch.streamText = null;
@@ -227,6 +287,7 @@ const AgentCanvasPage = () => {
       if (!project) return;
       const trimmed = message.trim();
       if (!trimmed) return;
+      const isResetCommand = /^\/(reset|new)(\s|$)/i.test(trimmed);
       const runId = crypto.randomUUID();
       const tile = project.tiles.find((entry) => entry.id === tileId);
       if (!tile) {
@@ -237,6 +298,14 @@ const AgentCanvasPage = () => {
           line: "Error: Tile not found.",
         });
         return;
+      }
+      if (isResetCommand) {
+        dispatch({
+          type: "updateTile",
+          projectId: project.id,
+          tileId,
+          patch: { outputLines: [], streamText: null, lastResult: null },
+        });
       }
       dispatch({
         type: "updateTile",
@@ -406,6 +475,9 @@ const AgentCanvasPage = () => {
       const nextTextRaw = extractText(payload.message);
       const nextText = nextTextRaw ? stripUiMetadata(nextTextRaw) : null;
       if (payload.state === "delta") {
+        if (typeof nextTextRaw === "string" && UI_METADATA_PREFIX_RE.test(nextTextRaw.trim())) {
+          return;
+        }
         if (typeof nextText === "string") {
           dispatch({
             type: "setStream",
@@ -442,18 +514,12 @@ const AgentCanvasPage = () => {
           type: "updateTile",
           projectId: match.projectId,
           tileId: match.tileId,
-          patch: { status: "idle", runId: null, streamText: null },
+          patch: { streamText: null },
         });
         return;
       }
 
       if (payload.state === "aborted") {
-        dispatch({
-          type: "updateTile",
-          projectId: match.projectId,
-          tileId: match.tileId,
-          patch: { status: "idle", runId: null, streamText: null },
-        });
         dispatch({
           type: "appendOutput",
           projectId: match.projectId,
@@ -465,16 +531,62 @@ const AgentCanvasPage = () => {
 
       if (payload.state === "error") {
         dispatch({
-          type: "updateTile",
-          projectId: match.projectId,
-          tileId: match.tileId,
-          patch: { status: "error", runId: null, streamText: null },
-        });
-        dispatch({
           type: "appendOutput",
           projectId: match.projectId,
           tileId: match.tileId,
           line: payload.errorMessage ? `Error: ${payload.errorMessage}` : "Run error.",
+        });
+        dispatch({
+          type: "updateTile",
+          projectId: match.projectId,
+          tileId: match.tileId,
+          patch: { streamText: null },
+        });
+      }
+    });
+  }, [client, dispatch, state.projects]);
+
+  useEffect(() => {
+    return client.onEvent((event: EventFrame) => {
+      if (event.event !== "agent") return;
+      const payload = event.payload as AgentEventPayload | undefined;
+      if (!payload?.runId) return;
+      const directMatch = payload.sessionKey
+        ? findTileBySessionKey(state.projects, payload.sessionKey)
+        : null;
+      const match = directMatch ?? findTileByRunId(state.projects, payload.runId);
+      if (!match) return;
+      if (payload.stream !== "lifecycle") return;
+      const project = state.projects.find((entry) => entry.id === match.projectId);
+      const tile = project?.tiles.find((entry) => entry.id === match.tileId);
+      if (!tile) return;
+      const phase = typeof payload.data?.phase === "string" ? payload.data.phase : "";
+      if (phase === "start") {
+        dispatch({
+          type: "updateTile",
+          projectId: match.projectId,
+          tileId: match.tileId,
+          patch: { status: "running", runId: payload.runId },
+        });
+        return;
+      }
+      if (phase === "end") {
+        if (tile.runId && tile.runId !== payload.runId) return;
+        dispatch({
+          type: "updateTile",
+          projectId: match.projectId,
+          tileId: match.tileId,
+          patch: { status: "idle", runId: null, streamText: null },
+        });
+        return;
+      }
+      if (phase === "error") {
+        if (tile.runId && tile.runId !== payload.runId) return;
+        dispatch({
+          type: "updateTile",
+          projectId: match.projectId,
+          tileId: match.tileId,
+          patch: { status: "error", runId: null, streamText: null },
         });
       }
     });
@@ -505,7 +617,7 @@ const AgentCanvasPage = () => {
 
   const handleProjectCreate = useCallback(async () => {
     if (!projectName.trim()) {
-      setProjectWarnings(["Project name is required."]);
+      setProjectWarnings(["Workspace name is required."]);
       return;
     }
     const result = await createProject(projectName.trim());
@@ -517,7 +629,7 @@ const AgentCanvasPage = () => {
 
   const handleProjectOpen = useCallback(async () => {
     if (!projectPath.trim()) {
-      setOpenProjectWarnings(["Project path is required."]);
+      setOpenProjectWarnings(["Workspace path is required."]);
       return;
     }
     const result = await openProject(projectPath.trim());
@@ -530,7 +642,7 @@ const AgentCanvasPage = () => {
   const handleProjectDelete = useCallback(async () => {
     if (!project) return;
     const confirmation = window.prompt(
-      `Type DELETE ${project.name} to confirm project deletion.`
+      `Type DELETE ${project.name} to confirm workspace deletion.`
     );
     if (confirmation !== `DELETE ${project.name}`) {
       return;
@@ -678,7 +790,7 @@ const AgentCanvasPage = () => {
 
         {state.loading ? (
           <div className="pointer-events-auto mx-auto w-full max-w-4xl">
-            <div className="glass-panel px-6 py-6 text-slate-700">Loading projects…</div>
+            <div className="glass-panel px-6 py-6 text-slate-700">Loading workspaces…</div>
           </div>
         ) : null}
 
@@ -688,7 +800,7 @@ const AgentCanvasPage = () => {
               <div className="flex flex-col gap-4">
                 <div className="grid gap-4">
                   <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                    Project name
+                    Workspace name
                     <input
                       className="h-11 rounded-full border border-slate-300 bg-white/80 px-4 text-sm text-slate-900 outline-none"
                       value={projectName}
@@ -702,7 +814,7 @@ const AgentCanvasPage = () => {
                     type="button"
                     onClick={handleProjectCreate}
                   >
-                    Create Project
+                    Create Workspace
                   </button>
                   <button
                     className="rounded-full border border-slate-300 px-5 py-2 text-sm font-semibold text-slate-700"
@@ -728,12 +840,12 @@ const AgentCanvasPage = () => {
               <div className="flex flex-col gap-4">
                 <div className="grid gap-4">
                   <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                    Project path
+                    Workspace path
                     <input
                       className="h-11 rounded-full border border-slate-300 bg-white/80 px-4 text-sm text-slate-900 outline-none"
                       value={projectPath}
                       onChange={(event) => setProjectPath(event.target.value)}
-                      placeholder="/Users/you/repos/my-project"
+                      placeholder="/Users/you/repos/my-workspace"
                     />
                   </label>
                 </div>
@@ -743,7 +855,7 @@ const AgentCanvasPage = () => {
                     type="button"
                     onClick={handleProjectOpen}
                   >
-                    Open Project
+                    Open Workspace
                   </button>
                   <button
                     className="rounded-full border border-slate-300 px-5 py-2 text-sm font-semibold text-slate-700"
@@ -774,7 +886,7 @@ const AgentCanvasPage = () => {
         {project ? null : (
           <div className="pointer-events-auto mx-auto w-full max-w-4xl">
             <div className="glass-panel px-6 py-8 text-slate-600">
-              Create a project to begin.
+              Create a workspace to begin.
             </div>
           </div>
         )}

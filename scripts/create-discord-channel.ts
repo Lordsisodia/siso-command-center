@@ -9,16 +9,17 @@ for (const entry of process.argv.slice(2)) {
 
 const agentName = args.get("agent-name");
 const agentId = args.get("agent-id");
-if (!agentName || !agentId) {
+const workspaceDir = args.get("workspace-dir");
+if (!agentName || !agentId || !workspaceDir) {
   console.error(
-    "Usage: node scripts/create-discord-channel.ts --agent-name=<name> --agent-id=<id> [--guild-id=<id>]"
+    "Usage: node scripts/create-discord-channel.ts --agent-name=<name> --agent-id=<id> --workspace-dir=<path> [--guild-id=<id>]"
   );
   process.exit(1);
 }
 
 const guildId = args.get("guild-id");
 
-createDiscordChannelForAgent({ agentName, agentId, guildId })
+createDiscordChannelForAgent({ agentName, agentId, guildId, workspaceDir })
   .then((result) => {
     console.log(
       JSON.stringify(

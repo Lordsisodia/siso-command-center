@@ -66,7 +66,7 @@ export const HeaderBar = ({
               );
             })
           ) : (
-            <span className="text-sm font-semibold text-slate-500">No projects</span>
+            <span className="text-sm font-semibold text-slate-500">No workspaces</span>
           )}
         </div>
         <span
@@ -79,14 +79,14 @@ export const HeaderBar = ({
           type="button"
           onClick={onCreateProject}
         >
-          New Project
+          New Workspace
         </button>
         <button
           className="rounded-full border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700"
           type="button"
           onClick={onOpenProject}
         >
-          Open Project
+          Open Workspace
         </button>
         <button
           className="rounded-full border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700"
@@ -94,7 +94,7 @@ export const HeaderBar = ({
           onClick={onDeleteProject}
           disabled={!activeProjectId}
         >
-          Delete
+          Delete Workspace
         </button>
       </div>
 

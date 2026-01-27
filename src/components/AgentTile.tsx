@@ -208,34 +208,35 @@ export const AgentTile = ({
                 onModelChange(value ? value : null);
               }}
             >
-              <option value="">Default</option>
+              <option value="xai/grok-4-1-fast-reasoning">grok-4-1-fast-reasoning</option>
+              <option value="xai/grok-4-1-fast-non-reasoning">
+                grok-4-1-fast-non-reasoning
+              </option>
               <option value="openai-codex/gpt-5.2-codex">GPT-5.2 Codex</option>
-              <option value="openai-codex/gpt-5.2">GPT-5.2 Codex (legacy)</option>
-              <option value="openai-codex/gpt-5.1-codex">GPT-5.1 Codex</option>
-              <option value="openai-codex/gpt-5.1-codex-mini">GPT-5.1 Codex Mini</option>
-              <option value="openai-codex/gpt-5.1-codex-max">GPT-5.1 Codex Max</option>
               <option value="zai/glm-4.7">glm-4.7</option>
             </select>
           </label>
-          <label className="flex items-center gap-2">
-            Thinking
-            <select
-              className="h-7 rounded-full border border-slate-200 bg-white/80 px-2 text-[11px] font-semibold text-slate-700"
-              value={tile.thinkingLevel ?? ""}
-              onChange={(event) => {
-                const value = event.target.value.trim();
-                onThinkingChange(value ? value : null);
-              }}
-            >
-              <option value="">Default</option>
-              <option value="off">Off</option>
-              <option value="minimal">Minimal</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="xhigh">XHigh</option>
-            </select>
-          </label>
+          {tile.model === "xai/grok-4-1-fast-non-reasoning" ? null : (
+            <label className="flex items-center gap-2">
+              Thinking
+              <select
+                className="h-7 rounded-full border border-slate-200 bg-white/80 px-2 text-[11px] font-semibold text-slate-700"
+                value={tile.thinkingLevel ?? ""}
+                onChange={(event) => {
+                  const value = event.target.value.trim();
+                  onThinkingChange(value ? value : null);
+                }}
+              >
+                <option value="">Default</option>
+                <option value="off">Off</option>
+                <option value="minimal">Minimal</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="xhigh">XHigh</option>
+              </select>
+            </label>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -252,7 +253,6 @@ export const AgentTile = ({
               onSend(message);
             }}
             placeholder="Send a command"
-            disabled={!canSend || tile.status === "running"}
           />
           <button
             className="rounded-full bg-slate-900 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400"

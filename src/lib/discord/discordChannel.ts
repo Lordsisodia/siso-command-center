@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { slugifyProjectName } from "../ids/slugify";
+import { loadClawdbotConfig, saveClawdbotConfig } from "../clawdbot/config";
 
 type DiscordChannelCreateResult = {
   channelId: string;
@@ -13,7 +14,6 @@ type DiscordChannelCreateResult = {
 };
 
 const ENV_PATH = path.join(os.homedir(), ".clawdbot", ".env");
-const CONFIG_PATH = path.join(os.homedir(), ".clawdbot", "clawdbot.json");
 
 const readEnvValue = (key: string) => {
   if (!fs.existsSync(ENV_PATH)) return null;
@@ -30,25 +30,8 @@ const readEnvValue = (key: string) => {
   return null;
 };
 
-const parseJsonLoose = (raw: string) => {
-  try {
-    return JSON.parse(raw) as Record<string, unknown>;
-  } catch {
-    const cleaned = raw.replace(/,(\s*[}\]])/g, "$1");
-    return JSON.parse(cleaned) as Record<string, unknown>;
-  }
-};
-
 const loadConfig = () => {
-  if (!fs.existsSync(CONFIG_PATH)) {
-    throw new Error(`Missing config at ${CONFIG_PATH}.`);
-  }
-  const raw = fs.readFileSync(CONFIG_PATH, "utf8");
-  return parseJsonLoose(raw);
-};
-
-const saveConfig = (config: Record<string, unknown>) => {
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), "utf8");
+  return loadClawdbotConfig();
 };
 
 const resolveGuildId = (config: Record<string, unknown>, guildId?: string) => {
@@ -69,17 +52,15 @@ const resolveGuildId = (config: Record<string, unknown>, guildId?: string) => {
   throw new Error("Multiple Discord guilds configured; specify a guild id.");
 };
 
-const ensureAgentWorkspace = (agentId: string) => {
-  const workspaceDir = path.join(os.homedir(), `clawd-${agentId}`);
+const ensureWorkspaceDir = (workspaceDir: string) => {
   if (fs.existsSync(workspaceDir)) {
     const stat = fs.statSync(workspaceDir);
     if (!stat.isDirectory()) {
       throw new Error(`Workspace path is not a directory: ${workspaceDir}`);
     }
-    return workspaceDir;
+    return;
   }
   fs.mkdirSync(workspaceDir, { recursive: true });
-  return workspaceDir;
 };
 
 const ensureAgentConfig = (
@@ -230,20 +211,22 @@ export const createDiscordChannelForAgent = async ({
   agentId,
   agentName,
   guildId,
+  workspaceDir,
 }: {
   agentId: string;
   agentName: string;
   guildId?: string;
+  workspaceDir: string;
 }): Promise<DiscordChannelCreateResult> => {
   const token = readEnvValue("DISCORD_BOT_TOKEN");
   if (!token) {
     throw new Error("DISCORD_BOT_TOKEN not found in ~/.clawdbot/.env.");
   }
-  const config = loadConfig();
+  const { config, configPath } = loadConfig();
   const resolvedGuildId = resolveGuildId(config, guildId);
   const channelName = slugifyProjectName(agentName);
   const warnings: string[] = [];
-  const workspaceDir = ensureAgentWorkspace(agentId);
+  ensureWorkspaceDir(workspaceDir);
   const addedAgent = ensureAgentConfig(config, agentId, agentName, workspaceDir);
   if (addedAgent) {
     warnings.push(`Registered agent ${agentId} in clawdbot.json.`);
@@ -272,7 +255,7 @@ export const createDiscordChannelForAgent = async ({
     }
     ensureDiscordChannelConfig(config, resolvedGuildId, existing.id);
     ensureDiscordBinding(config, existing.id, agentId);
-    saveConfig(config);
+    saveClawdbotConfig(configPath, config);
     warnings.push("Reused existing Discord channel.");
     return {
       channelId: existing.id,
@@ -305,7 +288,7 @@ export const createDiscordChannelForAgent = async ({
 
   ensureDiscordChannelConfig(config, resolvedGuildId, payload.id);
   ensureDiscordBinding(config, payload.id, agentId);
-  saveConfig(config);
+  saveClawdbotConfig(configPath, config);
 
   return {
     channelId: payload.id,

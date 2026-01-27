@@ -17,7 +17,7 @@ import type {
 export const fetchProjectsStore = async (): Promise<ProjectsStore> => {
   const res = await fetch("/api/projects", { cache: "no-store" });
   if (!res.ok) {
-    throw new Error("Failed to load projects.");
+    throw new Error("Failed to load workspaces.");
   }
   return (await res.json()) as ProjectsStore;
 };
@@ -32,7 +32,7 @@ export const createProject = async (
   });
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data?.error ?? "Failed to create project.");
+    throw new Error(data?.error ?? "Failed to create workspace.");
   }
   return data as ProjectCreateResult;
 };
@@ -47,7 +47,7 @@ export const openProject = async (
   });
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data?.error ?? "Failed to open project.");
+    throw new Error(data?.error ?? "Failed to open workspace.");
   }
   return data as ProjectOpenResult;
 };
@@ -60,7 +60,7 @@ export const saveProjectsStore = async (store: ProjectsStore): Promise<ProjectsS
   });
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data?.error ?? "Failed to save projects.");
+    throw new Error(data?.error ?? "Failed to save workspaces.");
   }
   return data as ProjectsStore;
 };
@@ -69,7 +69,7 @@ export const deleteProject = async (projectId: string): Promise<ProjectDeleteRes
   const res = await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data?.error ?? "Failed to delete project.");
+    throw new Error(data?.error ?? "Failed to delete workspace.");
   }
   return data as ProjectDeleteResult;
 };

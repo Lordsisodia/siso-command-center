@@ -74,10 +74,10 @@ export const loadStore = (): ProjectsStore => {
   try {
     const parsed = JSON.parse(raw) as RawStore;
     if (!parsed || !Array.isArray(parsed.projects)) {
-      throw new Error(`Projects store is invalid at ${STORE_PATH}.`);
+      throw new Error(`Workspaces store is invalid at ${STORE_PATH}.`);
     }
     if (!parsed.projects.every((project) => Array.isArray(project.tiles))) {
-      throw new Error(`Projects store is invalid at ${STORE_PATH}.`);
+      throw new Error(`Workspaces store is invalid at ${STORE_PATH}.`);
     }
     if (parsed.version === 2) {
       return parsed as ProjectsStore;
@@ -93,7 +93,7 @@ export const loadStore = (): ProjectsStore => {
     if (details.includes(STORE_PATH)) {
       throw new Error(details);
     }
-    throw new Error(`Failed to parse projects store at ${STORE_PATH}: ${details}`);
+    throw new Error(`Failed to parse workspaces store at ${STORE_PATH}: ${details}`);
   }
 };
 
