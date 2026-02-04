@@ -25,6 +25,11 @@ npm run dev
 - `npm run test`
 - `npm run e2e` (requires `npx playwright install`)
 
+## UX audit cleanup
+- For `localhost-ux-improvement` runs, always clean generated UX artifacts before committing:
+  - `npm run cleanup:ux-artifacts`
+- This clears `output/playwright/ux-audit/`, `.agent/ux-audit.md`, and `.agent/execplan-pending.md`.
+
 ## Task tracking (Beads)
 
 We track implementation work in this repo using **Beads** (`br`). The backlog lives *with the artifact being changed*:
