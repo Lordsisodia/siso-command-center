@@ -8,7 +8,6 @@ import type {
 export type StudioSettingsResponse = { settings: StudioSettings };
 
 type FocusedPatch = Record<string, Partial<StudioFocusedPreference> | null>;
-type SessionsPatch = Record<string, string | null>;
 
 export type StudioSettingsCoordinatorTransport = {
   fetchSettings: () => Promise<StudioSettingsResponse>;
@@ -26,17 +25,6 @@ const mergeFocusedPatch = (
   };
 };
 
-const mergeSessionsPatch = (
-  current: SessionsPatch | undefined,
-  next: SessionsPatch | undefined
-): SessionsPatch | undefined => {
-  if (!current && !next) return undefined;
-  return {
-    ...(current ?? {}),
-    ...(next ?? {}),
-  };
-};
-
 const mergeStudioPatch = (
   current: StudioSettingsPatch | null,
   next: StudioSettingsPatch
@@ -45,11 +33,9 @@ const mergeStudioPatch = (
     return {
       ...(next.gateway !== undefined ? { gateway: next.gateway } : {}),
       ...(next.focused ? { focused: { ...next.focused } } : {}),
-      ...(next.sessions ? { sessions: { ...next.sessions } } : {}),
     };
   }
   const focused = mergeFocusedPatch(current.focused, next.focused);
-  const sessions = mergeSessionsPatch(current.sessions, next.sessions);
   return {
     ...(next.gateway !== undefined
       ? { gateway: next.gateway }
@@ -57,7 +43,6 @@ const mergeStudioPatch = (
         ? { gateway: current.gateway }
         : {}),
     ...(focused ? { focused } : {}),
-    ...(sessions ? { sessions } : {}),
   };
 };
 
