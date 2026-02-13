@@ -76,14 +76,12 @@ import {
   upsertPendingGuidedSetup,
 } from "@/features/agents/creation/recovery";
 import {
-  beginPendingGuidedSetupRetry,
-  endPendingGuidedSetupRetry,
-} from "@/features/agents/creation/pendingSetupRetry";
-import {
-  loadPendingGuidedSetupsFromStorage,
   normalizePendingGuidedSetupGatewayScope,
-  persistPendingGuidedSetupsToStorage,
 } from "@/features/agents/creation/pendingSetupStore";
+import {
+  loadPendingGuidedSetupsForScope,
+  persistPendingGuidedSetupsForScopeWhenLoaded,
+} from "@/features/agents/creation/pendingGuidedSetupSessionStorageLifecycle";
 import {
   applyGuidedAgentSetup,
   type AgentGuidedSetup,
@@ -93,9 +91,7 @@ import {
   runGuidedCreateWorkflow,
   runGuidedRetryWorkflow,
 } from "@/features/agents/operations/guidedCreateWorkflow";
-import {
-  runPendingSetupRetryLifecycle,
-} from "@/features/agents/operations/pendingSetupLifecycleWorkflow";
+import { applyPendingGuidedSetupRetryViaStudio } from "@/features/agents/operations/pendingGuidedSetupRetryOperation";
 import {
   isGatewayDisconnectLikeError,
   type EventFrame,
@@ -118,18 +114,16 @@ import { randomUUID } from "@/lib/uuid";
 import type { ExecApprovalDecision, PendingExecApproval } from "@/features/agents/approvals/types";
 import {
   resolveExecApprovalEventEffects,
-  shouldTreatExecApprovalResolveErrorAsUnknownId,
 } from "@/features/agents/approvals/execApprovalLifecycleWorkflow";
+import { resolveExecApprovalViaStudio } from "@/features/agents/approvals/execApprovalResolveOperation";
 import {
   mergePendingApprovalsForFocusedAgent,
   nextPendingApprovalPruneDelayMs,
   pruneExpiredPendingApprovals,
   pruneExpiredPendingApprovalsMap,
-  removePendingApprovalEverywhere,
   removePendingApprovalById,
   removePendingApprovalByIdMap,
   upsertPendingApproval,
-  updatePendingApprovalById,
 } from "@/features/agents/approvals/pendingStore";
 import {
   TRANSCRIPT_V2_ENABLED,
@@ -141,11 +135,12 @@ import {
   resolveLatestUpdateKind,
 } from "@/features/agents/operations/latestUpdateWorkflow";
 import {
-  buildReconcileTerminalPatch,
-  resolveReconcileEligibility,
-  resolveReconcileWaitOutcome,
   resolveSummarySnapshotIntent,
 } from "@/features/agents/operations/fleetLifecycleWorkflow";
+import {
+  executeAgentReconcileCommands,
+  runAgentReconcileOperation,
+} from "@/features/agents/operations/agentReconcileOperation";
 import {
   executeHistorySyncCommands,
   runHistorySyncOperation,
@@ -154,8 +149,8 @@ import {
   buildMutationSideEffectCommands,
   buildQueuedMutationBlock,
   resolveMutationStartGuard,
-  resolvePendingSetupAutoRetryIntent,
 } from "@/features/agents/operations/agentMutationLifecycleController";
+import { runPendingGuidedSetupAutoRetryViaStudio } from "@/features/agents/operations/pendingGuidedSetupAutoRetryOperation";
 
 type ChatHistoryMessage = Record<string, unknown>;
 
@@ -733,61 +728,38 @@ const AgentStudioPage = () => {
 
   const applyPendingCreateSetupForAgentId = useCallback(
     async (params: { agentId: string; source: "auto" | "manual" }) => {
-      const resolvedAgentId = params.agentId.trim();
-      if (!resolvedAgentId) return false;
-      if (
-        retryPendingSetupBusyAgentId &&
-        retryPendingSetupBusyAgentId !== resolvedAgentId
-      ) {
-        return false;
-      }
-      if (!beginPendingGuidedSetupRetry(pendingSetupAutoRetryInFlightRef.current, resolvedAgentId)) {
-        return false;
-      }
-      const pendingSetup = pendingCreateSetupsByAgentIdRef.current[resolvedAgentId];
-      if (!pendingSetup) {
-        endPendingGuidedSetupRetry(pendingSetupAutoRetryInFlightRef.current, resolvedAgentId);
-        return false;
-      }
-      setRetryPendingSetupBusyAgentId(resolvedAgentId);
-      try {
-        return await runPendingSetupRetryLifecycle(
-          {
-            agentId: resolvedAgentId,
-            source: params.source,
-          },
-          {
-            executeRetry: async (agentId) =>
-              runGuidedRetryWorkflow(agentId, {
-                applyPendingSetup: async (targetAgentId) =>
-                  applyPendingGuidedSetupForAgent({
-                    client,
-                    agentId: targetAgentId,
-                    pendingSetupsByAgentId: pendingCreateSetupsByAgentIdRef.current,
-                  }),
-                removePending: (targetAgentId) => {
-                  setPendingCreateSetupsByAgentId((current) =>
-                    removePendingGuidedSetup(current, targetAgentId)
-                  );
-                },
+      return await applyPendingGuidedSetupRetryViaStudio({
+        agentId: params.agentId,
+        source: params.source,
+        retryBusyAgentId: retryPendingSetupBusyAgentId,
+        inFlightAgentIds: pendingSetupAutoRetryInFlightRef.current,
+        pendingSetupsByAgentId: pendingCreateSetupsByAgentIdRef.current,
+        setRetryBusyAgentId: setRetryPendingSetupBusyAgentId,
+        executeRetry: async (agentId) =>
+          runGuidedRetryWorkflow(agentId, {
+            applyPendingSetup: async (targetAgentId) =>
+              applyPendingGuidedSetupForAgent({
+                client,
+                agentId: targetAgentId,
+                pendingSetupsByAgentId: pendingCreateSetupsByAgentIdRef.current,
               }),
-            isDisconnectLikeError: isGatewayDisconnectLikeError,
-            resolveAgentName: (agentId) =>
-              stateRef.current.agents.find((agent) => agent.agentId === agentId)?.name ?? agentId,
-            onApplied: async () => {
-              await loadAgents();
+            removePending: (targetAgentId) => {
+              setPendingCreateSetupsByAgentId((current) =>
+                removePendingGuidedSetup(current, targetAgentId)
+              );
             },
-            onError: (message) => {
-              setError(message);
-            },
-          }
-        );
-      } finally {
-        endPendingGuidedSetupRetry(pendingSetupAutoRetryInFlightRef.current, resolvedAgentId);
-        setRetryPendingSetupBusyAgentId((current) =>
-          current === resolvedAgentId ? null : current
-        );
-      }
+          }),
+        isDisconnectLikeError: isGatewayDisconnectLikeError,
+        resolveAgentName: (agentId) =>
+          stateRef.current.agents.find((agent) => agent.agentId === agentId)?.name ??
+          agentId,
+        onApplied: async () => {
+          await loadAgents();
+        },
+        onError: (message) => {
+          setError(message);
+        },
+      });
     },
     [client, loadAgents, retryPendingSetupBusyAgentId, setError]
   );
@@ -918,12 +890,12 @@ const AgentStudioPage = () => {
   }, [setLoading, status]);
 
   useEffect(() => {
-    const loaded = loadPendingGuidedSetupsFromStorage({
+    const loaded = loadPendingGuidedSetupsForScope({
       storage: window.sessionStorage,
       gatewayScope: pendingGuidedSetupGatewayScope,
     });
-    setPendingCreateSetupsByAgentId(loaded);
-    setPendingCreateSetupsLoadedScope(pendingGuidedSetupGatewayScope);
+    setPendingCreateSetupsByAgentId(loaded.setupsByAgentId);
+    setPendingCreateSetupsLoadedScope(loaded.loadedScope);
   }, [pendingGuidedSetupGatewayScope]);
 
   useEffect(() => {
@@ -940,16 +912,16 @@ const AgentStudioPage = () => {
   }, [status]);
 
   useEffect(() => {
-    if (pendingCreateSetupsLoadedScope !== pendingGuidedSetupGatewayScope) return;
-    persistPendingGuidedSetupsToStorage({
+    persistPendingGuidedSetupsForScopeWhenLoaded({
       storage: window.sessionStorage,
       gatewayScope: pendingGuidedSetupGatewayScope,
+      loadedScope: pendingCreateSetupsLoadedScope,
       setupsByAgentId: pendingCreateSetupsByAgentId,
     });
   }, [pendingCreateSetupsByAgentId, pendingCreateSetupsLoadedScope, pendingGuidedSetupGatewayScope]);
 
   useEffect(() => {
-    const autoRetryIntent = resolvePendingSetupAutoRetryIntent({
+    void runPendingGuidedSetupAutoRetryViaStudio({
       status,
       agentsLoadedOnce,
       loadedScopeMatches: pendingCreateSetupsLoadedScope === pendingGuidedSetupGatewayScope,
@@ -959,12 +931,11 @@ const AgentStudioPage = () => {
       knownAgentIds: new Set(agents.map((agent) => agent.agentId)),
       attemptedAgentIds: pendingSetupAutoRetryAttemptedRef.current,
       inFlightAgentIds: pendingSetupAutoRetryInFlightRef.current,
-    });
-    if (autoRetryIntent.kind !== "retry") return;
-    pendingSetupAutoRetryAttemptedRef.current.add(autoRetryIntent.agentId);
-    void applyPendingCreateSetupForAgentId({
-      agentId: autoRetryIntent.agentId,
-      source: "auto",
+      applyRetry: (agentId) =>
+        applyPendingCreateSetupForAgentId({
+          agentId,
+          source: "auto",
+        }),
     });
   }, [
     agents,
@@ -1225,50 +1196,41 @@ const AgentStudioPage = () => {
   const reconcileRunningAgents = useCallback(async () => {
     if (status !== "connected") return;
     const snapshot = stateRef.current.agents;
-    for (const agent of snapshot) {
-      const eligibility = resolveReconcileEligibility({
-        status: agent.status,
-        sessionCreated: agent.sessionCreated,
-        runId: agent.runId,
-      });
-      if (!eligibility.shouldCheck) continue;
-      const runId = agent.runId?.trim() ?? "";
-      if (reconcileRunInFlightRef.current.has(runId)) continue;
-
-      reconcileRunInFlightRef.current.add(runId);
-      try {
-        const result = (await client.call("agent.wait", {
-          runId,
-          timeoutMs: 1,
-        })) as { status?: unknown };
-        const outcome = resolveReconcileWaitOutcome(result?.status);
-        if (!outcome) {
-          continue;
-        }
-
-        const latest = stateRef.current.agents.find((entry) => entry.agentId === agent.agentId);
-        if (!latest || latest.runId !== runId || latest.status !== "running") {
-          continue;
-        }
-
+    const commands = await runAgentReconcileOperation({
+      client,
+      agents: snapshot,
+      getLatestAgent: (agentId) =>
+        stateRef.current.agents.find((entry) => entry.agentId === agentId) ?? null,
+      claimRunId: (runId) => {
+        const normalized = runId.trim();
+        if (!normalized) return false;
+        if (reconcileRunInFlightRef.current.has(normalized)) return false;
+        reconcileRunInFlightRef.current.add(normalized);
+        return true;
+      },
+      releaseRunId: (runId) => {
+        const normalized = runId.trim();
+        if (!normalized) return;
+        reconcileRunInFlightRef.current.delete(normalized);
+      },
+      isDisconnectLikeError: isGatewayDisconnectLikeError,
+    });
+    executeAgentReconcileCommands({
+      commands,
+      dispatch,
+      clearRunTracking: (runId) => {
         runtimeEventHandlerRef.current?.clearRunTracking(runId);
-        dispatch({
-          type: "updateAgent",
-          agentId: agent.agentId,
-          patch: buildReconcileTerminalPatch({ outcome }),
-        });
-        console.info(
-          `[agent-reconcile] ${agent.agentId} run ${runId} resolved as ${outcome}.`
-        );
-        void loadAgentHistory(agent.agentId);
-      } catch (err) {
-        if (!isGatewayDisconnectLikeError(err)) {
-          console.warn("Failed to reconcile running agent.", err);
-        }
-      } finally {
-        reconcileRunInFlightRef.current.delete(runId);
-      }
-    }
+      },
+      requestHistoryRefresh: (agentId) => {
+        void loadAgentHistory(agentId);
+      },
+      logInfo: (message) => {
+        console.info(message);
+      },
+      logWarn: (message, error) => {
+        console.warn(message, error);
+      },
+    });
   }, [client, dispatch, loadAgentHistory, status]);
 
   useEffect(() => {
@@ -1970,101 +1932,23 @@ const AgentStudioPage = () => {
 
   const handleResolveExecApproval = useCallback(
     async (approvalId: string, decision: ExecApprovalDecision) => {
-      const id = approvalId.trim();
-      if (!id) return;
-      const resolvePendingApproval = (approvalId: string): PendingExecApproval | null => {
-        for (const approvals of Object.values(pendingExecApprovalsByAgentId)) {
-          const found = approvals.find((approval) => approval.id === approvalId);
-          if (found) return found;
-        }
-        return unscopedPendingExecApprovals.find((approval) => approval.id === approvalId) ?? null;
-      };
-      const resolveApprovalTargetAgentId = (approval: PendingExecApproval | null): string | null => {
-        if (!approval) return null;
-        const scopedAgentId = approval.agentId?.trim() ?? "";
-        if (scopedAgentId) return scopedAgentId;
-        const scopedSessionKey = approval.sessionKey?.trim() ?? "";
-        if (!scopedSessionKey) return null;
-        const matched = stateRef.current.agents.find(
-          (agent) => agent.sessionKey.trim() === scopedSessionKey
-        );
-        return matched?.agentId ?? null;
-      };
-      const approval = resolvePendingApproval(id);
-      const removeLocalApproval = (approvalId: string) => {
-        setPendingExecApprovalsByAgentId((current) =>
-          removePendingApprovalEverywhere({
-            approvalsByAgentId: current,
-            unscopedApprovals: [],
-            approvalId,
-          }).approvalsByAgentId
-        );
-        setUnscopedPendingExecApprovals((current) =>
-          removePendingApprovalEverywhere({
-            approvalsByAgentId: {},
-            unscopedApprovals: current,
-            approvalId,
-          }).unscopedApprovals
-        );
-      };
-      const setLocalApprovalState = (resolving: boolean, error: string | null) => {
-        setPendingExecApprovalsByAgentId((current) => {
-          let changed = false;
-          const next: Record<string, PendingExecApproval[]> = {};
-          for (const [agentId, approvals] of Object.entries(current)) {
-            const updated = updatePendingApprovalById(approvals, id, (approval) => ({
-              ...approval,
-              resolving,
-              error,
-            }));
-            if (updated !== approvals) {
-              changed = true;
-            }
-            if (updated.length > 0) {
-              next[agentId] = updated;
-            }
-          }
-          return changed ? next : current;
-        });
-        setUnscopedPendingExecApprovals((current) =>
-          updatePendingApprovalById(current, id, (approval) => ({
-            ...approval,
-            resolving,
-            error,
-          }))
-        );
-      };
-      setLocalApprovalState(true, null);
-      try {
-        await client.call("exec.approval.resolve", { id, decision });
-        removeLocalApproval(id);
-        if (decision === "allow-once" || decision === "allow-always") {
-          const targetAgentId = resolveApprovalTargetAgentId(approval);
-          if (targetAgentId) {
-            void (async () => {
-              const latest = stateRef.current.agents.find((entry) => entry.agentId === targetAgentId);
-              const activeRunId = latest?.runId?.trim() ?? "";
-              if (activeRunId) {
-                try {
-                  await client.call("agent.wait", { runId: activeRunId, timeoutMs: 15_000 });
-                } catch (waitError) {
-                  if (!isGatewayDisconnectLikeError(waitError)) {
-                    console.warn("Failed to wait for run after exec approval resolve.", waitError);
-                  }
-                }
-              }
-              await loadAgentHistory(targetAgentId);
-            })();
-          }
-        }
-      } catch (err) {
-        if (shouldTreatExecApprovalResolveErrorAsUnknownId(err)) {
-          removeLocalApproval(id);
-          return;
-        }
-        const message = err instanceof Error ? err.message : "Failed to resolve exec approval.";
-        setLocalApprovalState(false, message);
-      }
+      await resolveExecApprovalViaStudio({
+        client,
+        approvalId,
+        decision,
+        getAgents: () => stateRef.current.agents,
+        getLatestAgent: (agentId) =>
+          stateRef.current.agents.find((entry) => entry.agentId === agentId) ?? null,
+        getPendingState: () => ({
+          approvalsByAgentId: pendingExecApprovalsByAgentId,
+          unscopedApprovals: unscopedPendingExecApprovals,
+        }),
+        setPendingExecApprovalsByAgentId,
+        setUnscopedPendingExecApprovals,
+        requestHistoryRefresh: (agentId) => loadAgentHistory(agentId),
+        isDisconnectLikeError: isGatewayDisconnectLikeError,
+        logWarn: (message, error) => console.warn(message, error),
+      });
     },
     [client, loadAgentHistory, pendingExecApprovalsByAgentId, unscopedPendingExecApprovals]
   );
