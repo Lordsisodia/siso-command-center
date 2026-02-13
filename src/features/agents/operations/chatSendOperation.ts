@@ -2,10 +2,11 @@ import { syncGatewaySessionSettings, type GatewayClient } from "@/lib/gateway/Ga
 import { buildAgentInstruction, formatMetaMarkdown } from "@/lib/text/message-extract";
 import type { AgentState } from "@/features/agents/state/store";
 import { randomUUID } from "@/lib/uuid";
+import type { TranscriptAppendMeta } from "@/features/agents/state/transcript";
 
 type SendDispatchAction =
   | { type: "updateAgent"; agentId: string; patch: Partial<AgentState> }
-  | { type: "appendOutput"; agentId: string; line: string };
+  | { type: "appendOutput"; agentId: string; line: string; transcript?: TranscriptAppendMeta };
 
 type SendDispatch = (action: SendDispatchAction) => void;
 
@@ -50,33 +51,59 @@ export async function sendChatMessageViaStudio(params: {
     params.dispatch({
       type: "updateAgent",
       agentId,
-      patch: { outputLines: [], streamText: null, thinkingTrace: null, lastResult: null },
+      patch: {
+        outputLines: [],
+        streamText: null,
+        thinkingTrace: null,
+        lastResult: null,
+        sessionEpoch: (agent.sessionEpoch ?? 0) + 1,
+        transcriptEntries: [],
+        lastHistoryRequestRevision: null,
+        lastAppliedHistoryRequestId: null,
+      },
     });
   }
 
+  const userTimestamp = now();
   params.dispatch({
     type: "updateAgent",
     agentId,
     patch: {
       status: "running",
       runId,
-      runStartedAt: now(),
+      runStartedAt: userTimestamp,
       streamText: "",
       thinkingTrace: null,
       draft: "",
       lastUserMessage: trimmed,
-      lastActivityAt: now(),
+      lastActivityAt: userTimestamp,
     },
   });
   params.dispatch({
     type: "appendOutput",
     agentId,
-    line: formatMetaMarkdown({ role: "user", timestamp: now() }),
+    line: formatMetaMarkdown({ role: "user", timestamp: userTimestamp }),
+    transcript: {
+      source: "local-send",
+      runId,
+      sessionKey: params.sessionKey,
+      timestampMs: userTimestamp,
+      role: "user",
+      kind: "meta",
+    },
   });
   params.dispatch({
     type: "appendOutput",
     agentId,
     line: `> ${trimmed}`,
+    transcript: {
+      source: "local-send",
+      runId,
+      sessionKey: params.sessionKey,
+      timestampMs: userTimestamp,
+      role: "user",
+      kind: "user",
+    },
   });
 
   try {

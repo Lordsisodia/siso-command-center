@@ -75,16 +75,19 @@ describe("sendChatMessageViaStudio", () => {
     });
 
     expect(clearRunTracking).toHaveBeenCalledWith("run-1");
-    expect(dispatch).toHaveBeenCalledWith({
-      type: "updateAgent",
-      agentId: agent.agentId,
-      patch: {
-        outputLines: [],
-        streamText: null,
-        thinkingTrace: null,
-        lastResult: null,
-      },
-    });
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "updateAgent",
+        agentId: agent.agentId,
+        patch: expect.objectContaining({
+          outputLines: [],
+          streamText: null,
+          thinkingTrace: null,
+          lastResult: null,
+          transcriptEntries: [],
+        }),
+      })
+    );
   });
 
   it("syncs_session_settings_when_not_synced", async () => {

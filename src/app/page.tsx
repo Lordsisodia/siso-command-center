@@ -33,7 +33,7 @@ import {
   useAgentStore,
 } from "@/features/agents/state/store";
 import {
-  buildHistorySyncPatch,
+  buildHistoryLines,
   buildSummarySnapshotPatches,
   type SummaryPreviewSnapshot,
   type SummaryStatusSnapshot,
@@ -119,6 +119,14 @@ import {
   upsertPendingApproval,
   updatePendingApprovalById,
 } from "@/features/agents/approvals/pendingStore";
+import {
+  areTranscriptEntriesEqual,
+  buildOutputLinesFromTranscriptEntries,
+  buildTranscriptEntriesFromLines,
+  logTranscriptDebugMetric,
+  mergeTranscriptEntriesWithHistory,
+  type TranscriptEntry,
+} from "@/features/agents/state/transcript";
 
 type ChatHistoryMessage = Record<string, unknown>;
 
@@ -225,6 +233,27 @@ const resolveNextNewAgentName = (agents: AgentState[]) => {
     return candidate;
   }
   throw new Error("Unable to allocate a unique agent name.");
+};
+
+const areStringArraysEqual = (left: string[], right: string[]): boolean => {
+  if (left.length !== right.length) return false;
+  for (let i = 0; i < left.length; i += 1) {
+    if (left[i] !== right[i]) return false;
+  }
+  return true;
+};
+
+const ensureTranscriptEntriesForAgent = (agent: AgentState): TranscriptEntry[] => {
+  if (Array.isArray(agent.transcriptEntries)) {
+    return agent.transcriptEntries;
+  }
+  return buildTranscriptEntriesFromLines({
+    lines: agent.outputLines,
+    sessionKey: agent.sessionKey,
+    source: "legacy",
+    startSequence: 0,
+    confirmed: true,
+  });
 };
 
 const AgentStudioPage = () => {
@@ -1135,6 +1164,9 @@ const AgentStudioPage = () => {
       const sessionKey = agent?.sessionKey?.trim();
       if (!agent || !agent.sessionCreated || !sessionKey) return;
       if (historyInFlightRef.current.has(sessionKey)) return;
+      const historyRequestId = randomUUID();
+      const requestRevision = agent.transcriptRevision ?? agent.outputLines.length;
+      const requestEpoch = agent.sessionEpoch ?? 0;
 
       const requestedLimit = options?.limit;
       const resolvedLimit =
@@ -1143,6 +1175,13 @@ const AgentStudioPage = () => {
           : DEFAULT_CHAT_HISTORY_LIMIT;
       historyInFlightRef.current.add(sessionKey);
       const loadedAt = Date.now();
+      dispatch({
+        type: "updateAgent",
+        agentId,
+        patch: {
+          lastHistoryRequestRevision: requestRevision,
+        },
+      });
       try {
         const result = await client.call<ChatHistoryResult>("chat.history", {
           sessionKey,
@@ -1150,24 +1189,103 @@ const AgentStudioPage = () => {
         });
         const latest = stateRef.current.agents.find((entry) => entry.agentId === agentId);
         if (!latest || latest.sessionKey.trim() !== sessionKey) {
+          logTranscriptDebugMetric("history_response_dropped_stale", {
+            reason: "session_key_changed",
+            agentId,
+            requestId: historyRequestId,
+          });
+          return;
+        }
+        if ((latest.sessionEpoch ?? 0) !== requestEpoch) {
+          logTranscriptDebugMetric("history_response_dropped_stale", {
+            reason: "session_epoch_changed",
+            agentId,
+            requestId: historyRequestId,
+          });
           return;
         }
         const historyMessages = result.messages ?? [];
-        const patch = buildHistorySyncPatch({
-          messages: historyMessages,
-          currentLines: latest.outputLines,
-          loadedAt,
-          status: latest.status,
-          runId: latest.runId,
+        const metadataPatch: Partial<AgentState> = {
+          historyLoadedAt: loadedAt,
+          historyFetchLimit: resolvedLimit,
+          historyFetchedCount: historyMessages.length,
+          historyMaybeTruncated: historyMessages.length >= resolvedLimit,
+          lastAppliedHistoryRequestId: historyRequestId,
+        };
+        const latestRevision = latest.transcriptRevision ?? latest.outputLines.length;
+        if (latest.status === "running" && Boolean(latest.runId?.trim())) {
+          logTranscriptDebugMetric("history_apply_skipped_running", {
+            agentId,
+            requestId: historyRequestId,
+            runId: latest.runId,
+          });
+          dispatch({
+            type: "updateAgent",
+            agentId,
+            patch: metadataPatch,
+          });
+          return;
+        }
+        if (latestRevision !== requestRevision) {
+          logTranscriptDebugMetric("history_response_dropped_stale", {
+            reason: "transcript_revision_changed",
+            agentId,
+            requestId: historyRequestId,
+            requestRevision,
+            latestRevision,
+          });
+          dispatch({
+            type: "updateAgent",
+            agentId,
+            patch: metadataPatch,
+          });
+          return;
+        }
+
+        const existingEntries = ensureTranscriptEntriesForAgent(latest);
+        const history = buildHistoryLines(historyMessages);
+        const rawHistoryEntries = buildTranscriptEntriesFromLines({
+          lines: history.lines,
+          sessionKey,
+          source: "history",
+          startSequence: latest.transcriptSequenceCounter ?? existingEntries.length,
+          confirmed: true,
         });
+        const historyEntries = rawHistoryEntries.map((entry) => ({
+          ...entry,
+          entryId: `history:${sessionKey}:${entry.kind}:${entry.role}:${entry.timestampMs ?? "none"}:${entry.fingerprint}`,
+        }));
+        const merged = mergeTranscriptEntriesWithHistory({
+          existingEntries,
+          historyEntries,
+        });
+        if (merged.conflictCount > 0) {
+          logTranscriptDebugMetric("transcript_merge_conflicts", {
+            agentId,
+            requestId: historyRequestId,
+            conflictCount: merged.conflictCount,
+          });
+        }
+        const mergedLines = buildOutputLinesFromTranscriptEntries(merged.entries);
+        const transcriptChanged = !areTranscriptEntriesEqual(existingEntries, merged.entries);
+        const linesChanged = !areStringArraysEqual(latest.outputLines, mergedLines);
         dispatch({
           type: "updateAgent",
           agentId,
           patch: {
-            ...patch,
-            historyFetchLimit: resolvedLimit,
-            historyFetchedCount: historyMessages.length,
-            historyMaybeTruncated: historyMessages.length >= resolvedLimit,
+            ...metadataPatch,
+            ...(transcriptChanged || linesChanged
+              ? {
+                  transcriptEntries: merged.entries,
+                  outputLines: mergedLines,
+                }
+              : {}),
+            ...(history.lastAssistant ? { lastResult: history.lastAssistant } : {}),
+            ...(history.lastAssistant ? { latestPreview: history.lastAssistant } : {}),
+            ...(typeof history.lastAssistantAt === "number"
+              ? { lastAssistantMessageAt: history.lastAssistantAt }
+              : {}),
+            ...(history.lastUser ? { lastUserMessage: history.lastUser } : {}),
           },
         });
       } catch (err) {
