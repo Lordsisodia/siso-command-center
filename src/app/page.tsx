@@ -333,6 +333,7 @@ const AgentStudioPage = () => {
   );
   const specialUpdateRef = useRef<Map<string, string>>(new Map());
   const specialUpdateInFlightRef = useRef<Set<string>>(new Set());
+  const preferredSelectedAgentIdRef = useRef<string | null>(null);
   const pendingCreateSetupsByAgentIdRef = useRef<Record<string, AgentGuidedSetup>>({});
   const pendingDraftValuesRef = useRef<Map<string, string>>(new Map());
   const pendingDraftTimersRef = useRef<Map<string, number>>(new Map());
@@ -695,7 +696,17 @@ const AgentStudioPage = () => {
       if (!gatewayConfigSnapshot && result.configSnapshot) {
         setGatewayConfigSnapshot(result.configSnapshot);
       }
-      hydrateAgents(result.seeds);
+      const preferredSelectedAgentId = preferredSelectedAgentIdRef.current?.trim() ?? "";
+      const hasCurrentSelection = Boolean(stateRef.current.selectedAgentId);
+      const preferredSelectedAgentExists =
+        preferredSelectedAgentId.length > 0 &&
+        result.seeds.some((seed) => seed.agentId === preferredSelectedAgentId);
+      const initialSelectedAgentId = hasCurrentSelection
+        ? undefined
+        : preferredSelectedAgentExists
+          ? preferredSelectedAgentId
+          : result.suggestedSelectedAgentId ?? undefined;
+      hydrateAgents(result.seeds, initialSelectedAgentId);
       const sessionSettingsSyncedAgentIds = new Set(result.sessionSettingsSyncedAgentIds);
       for (const agentId of result.sessionCreatedAgentIds) {
         dispatch({
@@ -713,9 +724,6 @@ const AgentStudioPage = () => {
           agentId: entry.agentId,
           patch: entry.patch,
         });
-      }
-      if (result.suggestedSelectedAgentId) {
-        dispatch({ type: "selectAgent", agentId: result.suggestedSelectedAgentId });
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load agents.";
@@ -814,11 +822,13 @@ const AgentStudioPage = () => {
     let cancelled = false;
     const key = gatewayUrl.trim();
     if (!key) {
+      preferredSelectedAgentIdRef.current = null;
       setFocusedPreferencesLoaded(true);
       return;
     }
     setFocusedPreferencesLoaded(false);
     focusFilterTouchedRef.current = false;
+    preferredSelectedAgentIdRef.current = null;
     const loadFocusedPreferences = async () => {
       try {
         const settings = await settingsCoordinator.loadSettings();
@@ -830,9 +840,11 @@ const AgentStudioPage = () => {
         }
         const preference = resolveFocusedPreference(settings, key);
         if (preference) {
+          preferredSelectedAgentIdRef.current = preference.selectedAgentId;
           setFocusFilter(preference.filter);
           return;
         }
+        preferredSelectedAgentIdRef.current = null;
         setFocusFilter("all");
       } catch (err) {
         console.error("Failed to load focused preference.", err);
@@ -870,6 +882,31 @@ const AgentStudioPage = () => {
       300
     );
   }, [focusFilter, gatewayUrl, settingsCoordinator]);
+
+  useEffect(() => {
+    const key = gatewayUrl.trim();
+    if (!key) return;
+    if (status !== "connected") return;
+    if (!focusedPreferencesLoaded || !agentsLoadedOnce) return;
+    settingsCoordinator.schedulePatch(
+      {
+        focused: {
+          [key]: {
+            mode: "focused",
+            selectedAgentId: state.selectedAgentId,
+          },
+        },
+      },
+      300
+    );
+  }, [
+    agentsLoadedOnce,
+    focusedPreferencesLoaded,
+    gatewayUrl,
+    settingsCoordinator,
+    status,
+    state.selectedAgentId,
+  ]);
 
   useEffect(() => {
     if (status !== "connected" || !focusedPreferencesLoaded) return;
