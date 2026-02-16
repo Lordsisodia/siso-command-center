@@ -1,10 +1,51 @@
-![Home screen](home-screen.png)
+# SISO Command Center
 
-# OpenClaw Studio
+A custom fork of OpenClaw Studio with enhanced sidebar and dashboard features for managing AI agents.
 
-[![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/VEpdKJ9e)
+## Features
 
-OpenClaw Studio is a Next.js dashboard for managing OpenClaw agents via the OpenClaw Gateway (WebSocket).
+- **Enhanced Fleet Sidebar**
+  - Keyboard navigation (arrow keys + Enter)
+  - Pinned agents (persisted to localStorage)
+  - Collapsible sidebar with persisted state
+  - Quick status toggle (click to start/stop)
+  - Right-click context menu
+  - Multi-select mode for bulk actions
+  - Running/total agent counts per project
+  - Current task preview in agent cards
+  - Filter persistence (All/Running/Idle)
+
+- **Dashboard**
+  - Project widgets
+  - Global activity feed
+
+## Upstream
+
+This project is based on:
+- [grp06/openclaw-studio](https://github.com/grp06/openclaw-studio) - Original OpenClaw Studio
+- [lordsisodia/siso-command-center](https://github.com/Lordsisodia/siso-command-center) - This fork
+
+> Goal: Eventually merge improvements back to upstream OpenClaw Studio.
+
+## Quick Start
+
+```bash
+npm install
+npm run dev
+```
+
+Open http://localhost:3000 and configure your Gateway URL and token.
+
+## Tech Stack
+
+- Next.js 16
+- TypeScript
+- Tailwind CSS
+- WebSocket (OpenClaw Gateway)
+
+## License
+
+MIT
 
 ## How Studio Connects (Read This If You Use A Phone / Remote Host)
 
