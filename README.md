@@ -52,6 +52,7 @@ MIT
 We want to integrate with and contribute back to the following agent frameworks:
 
 - **OpenClaw Studio** - [grp06/openclaw-studio](https://github.com/grp06/openclaw-studio) - Current base
+- **Mission Control** - [crshdn/mission-control](https://github.com/crshdn/mission-control) - Kanban + AI planning (steal: kanban board, AI planning flow)
 - **MetaGPT** - [FoundationAgents/MetaGPT](https://github.com/FoundationAgents/MetaGPT) - Multi-agent framework
 - **DEER Flow** - [bytedance/deer-flow](https://github.com/bytedance/deer-flow) - Deep research
 - **Google ADK** - [google/adk-python](https://github.com/google/adk-python) - Agent Development Kit
