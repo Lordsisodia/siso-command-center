@@ -47,6 +47,22 @@ Open http://localhost:3000 and configure your Gateway URL and token.
 
 MIT
 
+## Planned Integrations
+
+We want to integrate with and contribute back to the following agent frameworks:
+
+- **OpenClaw Studio** - [grp06/openclaw-studio](https://github.com/grp06/openclaw-studio) - Current base
+- **MetaGPT** - [FoundationAgents/MetaGPT](https://github.com/FoundationAgents/MetaGPT) - Multi-agent framework
+- **DEER Flow** - [bytedance/deer-flow](https://github.com/bytedance/deer-flow) - Deep research
+- **Google ADK** - [google/adk-python](https://github.com/google/adk-python) - Agent Development Kit
+- **PraisonAI** - [MervinPraison/PraisonAI](https://github.com/MervinPraison/PraisonAI) - AI agent framework
+- **Claude Flow** - [ruvnet/Claude-Flow](https://github.com/ruvnet/Claude-Flow) - Claude extension
+- **Ralphy** - [michaelshimeles/ralphy](https://github.com/michaelshimeles/ralphy) - Autonomous coding
+- **AgentScope** - [modelscope/agentscope](https://github.com/modelscope/agentscope) - Multi-agent platform
+- **Astra Agent** - [iflytek/astron](https://github.com/iflytek/astron) - iFlytek agent
+
+Want to add more? Tell me the repos and I'll update.
+
 ## How Studio Connects (Read This If You Use A Phone / Remote Host)
 
 There are **two separate connections** involved:
