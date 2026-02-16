@@ -14,11 +14,12 @@ import { GatewayConnectScreen } from "@/features/agents/components/GatewayConnec
 import { EmptyStatePanel } from "@/features/agents/components/EmptyStatePanel";
 import { MainDashboard } from "@/features/dashboard/components/MainDashboard";
 import { ProjectDashboard } from "@/features/projects/components/ProjectDashboard";
+import { OrcaDashboard } from "@/features/orca/components/OrcaDashboard";
 
-const PROJECTS = [
-  { id: "blackbox5", name: "BlackBox5", color: "bg-blue-500", colorClass: "bg-blue-500/10 border-blue-500/30" },
-  { id: "lumelle", name: "Lumelle", color: "bg-purple-500", colorClass: "bg-purple-500/10 border-purple-500/30" },
-  { id: "siso-internal", name: "SISO Internal", color: "bg-orange-500", colorClass: "bg-orange-500/10 border-orange-500/30" },
+const PROJECTS: { id: string; name: string; color: string; colorClass: string; accentColor: string; accentGlow: string }[] = [
+  { id: "blackbox5", name: "BlackBox5", color: "bg-blue-500", colorClass: "bg-blue-500/10 border-blue-500/30", accentColor: "text-blue-400", accentGlow: "blue" },
+  { id: "lumelle", name: "Lumelle", color: "bg-purple-500", colorClass: "bg-purple-500/10 border-purple-500/30", accentColor: "text-purple-400", accentGlow: "purple" },
+  { id: "siso-internal", name: "SISO Internal", color: "bg-orange-500", colorClass: "bg-orange-500/10 border-orange-500/30", accentColor: "text-orange-400", accentGlow: "orange" },
 ];
 import {
   extractText,
@@ -193,7 +194,7 @@ type SessionsListResult = {
   sessions?: SessionsListEntry[];
 };
 
-type MobilePane = "dashboard" | "fleet" | "chat" | "settings" | "brain" | "flow" | "project";
+type MobilePane = "dashboard" | "fleet" | "chat" | "settings" | "brain" | "flow" | "project" | "orca";
 type DeleteAgentBlockPhase = "queued" | "deleting" | "awaiting-restart";
 type DeleteAgentBlockState = {
   agentId: string;
@@ -315,6 +316,7 @@ const AgentStudioPage = () => {
   const [stopBusyAgentId, setStopBusyAgentId] = useState<string | null>(null);
   const [mobilePane, setMobilePane] = useState<MobilePane>("chat");
   const [pipelineModalOpen, setPipelineModalOpen] = useState(false);
+  const [orcaOpen, setOrcaOpen] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [dashboardOpen, setDashboardOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
@@ -2615,6 +2617,8 @@ const AgentStudioPage = () => {
             dashboardOpen={mobilePane === "dashboard"}
             onPipelineClick={() => setPipelineModalOpen(true)}
             pipelineOpen={pipelineModalOpen}
+            onOrcaClick={() => setMobilePane("orca")}
+            orcaOpen={mobilePane === "orca"}
             activityOpen={activityOpen}
             onActivityToggle={() => setActivityOpen(!activityOpen)}
             activityCount={state.agents.length}
@@ -2656,7 +2660,7 @@ const AgentStudioPage = () => {
 
         <div className="flex min-h-0 flex-1 flex-col gap-4 xl:flex-row">
           <div className="glass-panel bg-surface-1 p-2 xl:hidden" data-testid="mobile-pane-toggle">
-            <div className="grid grid-cols-6 gap-1">
+            <div className="grid grid-cols-7 gap-1">
               <button
                 type="button"
                 className={`rounded-md border px-1 py-2 font-mono text-[9px] font-semibold uppercase tracking-[0.13em] transition ${
@@ -2728,6 +2732,17 @@ const AgentStudioPage = () => {
                 onClick={() => setMobilePane("flow")}
               >
                 Flow
+              </button>
+              <button
+                type="button"
+                className={`rounded-md border px-2 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.13em] transition ${
+                  mobilePane === "orca"
+                    ? "border-border bg-surface-2 text-foreground"
+                    : "border-border/80 bg-surface-1 text-muted-foreground hover:border-border hover:bg-surface-2"
+                }`}
+                onClick={() => setMobilePane("orca")}
+              >
+                Orca
               </button>
             </div>
           </div>
@@ -2939,6 +2954,19 @@ const AgentStudioPage = () => {
             data-testid="workflow-flow-panel"
           >
             <AgentPipelinePanel />
+          </div>
+          <div
+            className={`${mobilePane === "orca" ? "flex" : "hidden"} min-h-0 flex-1 overflow-hidden`}
+            data-testid="orca-panel"
+          >
+            <OrcaDashboard
+              agents={state.agents}
+              onAgentClick={(agentId) => {
+                flushPendingDraft(focusedAgent?.agentId ?? null);
+                dispatch({ type: "selectAgent", agentId });
+                setMobilePane("chat");
+              }}
+            />
           </div>
         </div>
       </div>

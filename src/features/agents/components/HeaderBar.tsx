@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { GatewayStatus } from "@/lib/gateway/GatewayClient";
-import { Brain, Plug, LayoutDashboard, Network } from "lucide-react";
+import { Brain, Plug, LayoutDashboard, Network, Waves } from "lucide-react";
 
 type HeaderBarProps = {
   status: GatewayStatus;
@@ -14,6 +14,8 @@ type HeaderBarProps = {
   dashboardOpen?: boolean;
   onPipelineClick?: () => void;
   pipelineOpen?: boolean;
+  onOrcaClick?: () => void;
+  orcaOpen?: boolean;
   activityOpen?: boolean;
   onActivityToggle?: () => void;
   activityCount?: number;
@@ -30,6 +32,8 @@ export const HeaderBar = ({
   dashboardOpen = false,
   onPipelineClick,
   pipelineOpen = false,
+  onOrcaClick,
+  orcaOpen = false,
   activityOpen = false,
   onActivityToggle,
   activityCount = 0,
@@ -100,6 +104,20 @@ export const HeaderBar = ({
             >
               <Network className="h-4 w-4" />
               Pipeline
+            </button>
+          )}
+          {onOrcaClick && (
+            <button
+              className={`flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition ${
+                orcaOpen
+                  ? "border-border bg-surface-2 text-foreground"
+                  : "border-input/90 bg-surface-3 text-foreground hover:border-border hover:bg-surface-2"
+              }`}
+              type="button"
+              onClick={onOrcaClick}
+            >
+              <Waves className="h-4 w-4" />
+              Orca
             </button>
           )}
           <button
