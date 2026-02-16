@@ -12,6 +12,14 @@ import { HeaderBar } from "@/features/agents/components/HeaderBar";
 import { ConnectionPanel } from "@/features/agents/components/ConnectionPanel";
 import { GatewayConnectScreen } from "@/features/agents/components/GatewayConnectScreen";
 import { EmptyStatePanel } from "@/features/agents/components/EmptyStatePanel";
+import { MainDashboard } from "@/features/dashboard/components/MainDashboard";
+import { ProjectDashboard } from "@/features/projects/components/ProjectDashboard";
+
+const PROJECTS = [
+  { id: "blackbox5", name: "BlackBox5", color: "bg-blue-500", colorClass: "bg-blue-500/10 border-blue-500/30" },
+  { id: "lumelle", name: "Lumelle", color: "bg-purple-500", colorClass: "bg-purple-500/10 border-purple-500/30" },
+  { id: "siso-internal", name: "SISO Internal", color: "bg-orange-500", colorClass: "bg-orange-500/10 border-orange-500/30" },
+];
 import {
   extractText,
   isHeartbeatPrompt,
@@ -155,6 +163,8 @@ import {
   resolveMutationStartGuard,
 } from "@/features/agents/operations/agentMutationLifecycleController";
 import { runPendingGuidedSetupAutoRetryViaStudio } from "@/features/agents/operations/pendingGuidedSetupAutoRetryOperation";
+import { WorkflowFlowPanel, WorkflowFlowPanelEmpty, AgentPipelinePanel } from "@/features/workflows";
+import { PipelineModal } from "@/features/workflows/components/PipelineModal";
 
 type ChatHistoryMessage = Record<string, unknown>;
 
@@ -183,7 +193,7 @@ type SessionsListResult = {
   sessions?: SessionsListEntry[];
 };
 
-type MobilePane = "fleet" | "chat" | "settings" | "brain";
+type MobilePane = "dashboard" | "fleet" | "chat" | "settings" | "brain" | "flow" | "project";
 type DeleteAgentBlockPhase = "queued" | "deleting" | "awaiting-restart";
 type DeleteAgentBlockState = {
   agentId: string;
@@ -267,7 +277,25 @@ const AgentStudioPage = () => {
     setToken,
   } = useGatewayConnection(settingsCoordinator);
 
+  const noGateway = true && status === "disconnected";
+
   const { state, dispatch, hydrateAgents, setError, setLoading } = useAgentStore();
+
+  const MOCK_AGENTS = [
+    { agentId: "pm-siso-internal", name: "PM - SISO Internal", sessionKey: "pm-siso-internal", avatarSeed: "pm-siso", project: "siso-internal" },
+    { agentId: "pm-research", name: "PM - Research", sessionKey: "pm-research", avatarSeed: "pm-research", project: "blackbox5" },
+    { agentId: "planner-blackbox5", name: "Planner - Stories", sessionKey: "planner-blackbox5", avatarSeed: "planner", project: "blackbox5" },
+    { agentId: "static-lumelle", name: "Static Analysis", sessionKey: "static-lumelle", avatarSeed: "static", project: "lumelle" },
+    { agentId: "e2e-lumelle", name: "E2E Testing", sessionKey: "e2e-lumelle", avatarSeed: "e2e", project: "lumelle" },
+  ];
+
+  useEffect(() => {
+    if (noGateway && state.agents.length === 0) {
+      hydrateAgents(MOCK_AGENTS);
+      setAgentsLoadedOnce(true);
+    }
+  }, [noGateway, state.agents.length, hydrateAgents]);
+
   const [showConnectionPanel, setShowConnectionPanel] = useState(false);
   const [focusFilter, setFocusFilter] = useState<FocusFilter>("all");
   const [focusedPreferencesLoaded, setFocusedPreferencesLoaded] = useState(false);
@@ -286,6 +314,11 @@ const AgentStudioPage = () => {
   const [createAgentModalError, setCreateAgentModalError] = useState<string | null>(null);
   const [stopBusyAgentId, setStopBusyAgentId] = useState<string | null>(null);
   const [mobilePane, setMobilePane] = useState<MobilePane>("chat");
+  const [pipelineModalOpen, setPipelineModalOpen] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [dashboardOpen, setDashboardOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [settingsAgentId, setSettingsAgentId] = useState<string | null>(null);
   const [settingsCronJobs, setSettingsCronJobs] = useState<CronJobSummary[]>([]);
   const [settingsCronLoading, setSettingsCronLoading] = useState(false);
@@ -2461,7 +2494,7 @@ const AgentStudioPage = () => {
   );
 
   const connectionPanelVisible = showConnectionPanel;
-  const hasAnyAgents = agents.length > 0;
+  const hasAnyAgents = noGateway || agents.length > 0;
   const configMutationStatusLine = activeConfigMutation
     ? `Applying config change: ${activeConfigMutation.label}`
     : queuedConfigMutationCount > 0
@@ -2511,24 +2544,13 @@ const AgentStudioPage = () => {
     }
   }, [gatewayError]);
 
-  if (!agentsLoadedOnce && (!didAttemptGatewayConnect || status === "connecting")) {
-    return (
-      <div className="relative min-h-screen w-screen overflow-hidden bg-background">
-        <div className="flex min-h-screen items-center justify-center px-6">
-          <div className="glass-panel w-full max-w-md px-6 py-6 text-center">
-            <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              OpenClaw Studio
-            </div>
-            <div className="mt-3 text-sm text-muted-foreground">
-              {status === "connecting" ? "Connecting to gateway…" : "Booting Studio…"}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (noGateway) {
+      setMobilePane("dashboard");
+    }
+  }, [noGateway]);
 
-  if (status === "disconnected" && !agentsLoadedOnce && didAttemptGatewayConnect) {
+  if (!noGateway && !agentsLoadedOnce && (!didAttemptGatewayConnect || status === "connecting")) {
     return (
       <div className="relative min-h-screen w-screen overflow-hidden bg-background">
         <div className="relative z-10 flex h-screen flex-col gap-4 px-3 py-3 sm:px-4 sm:py-4 md:px-6 md:py-6">
@@ -2563,7 +2585,7 @@ const AgentStudioPage = () => {
         <div className="flex min-h-screen items-center justify-center px-6">
           <div className="glass-panel w-full max-w-md px-6 py-6 text-center">
             <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              OpenClaw Studio
+              SISO Command Center
             </div>
             <div className="mt-3 text-sm text-muted-foreground">Loading agents…</div>
           </div>
@@ -2589,6 +2611,13 @@ const AgentStudioPage = () => {
             onBrainFiles={handleBrainToggle}
             brainFilesOpen={brainPanelOpen}
             brainDisabled={!hasAnyAgents}
+            onDashboardClick={() => setMobilePane("dashboard")}
+            dashboardOpen={mobilePane === "dashboard"}
+            onPipelineClick={() => setPipelineModalOpen(true)}
+            pipelineOpen={pipelineModalOpen}
+            activityOpen={activityOpen}
+            onActivityToggle={() => setActivityOpen(!activityOpen)}
+            activityCount={state.agents.length}
           />
         </div>
 
@@ -2627,10 +2656,21 @@ const AgentStudioPage = () => {
 
         <div className="flex min-h-0 flex-1 flex-col gap-4 xl:flex-row">
           <div className="glass-panel bg-surface-1 p-2 xl:hidden" data-testid="mobile-pane-toggle">
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-6 gap-1">
               <button
                 type="button"
-                className={`rounded-md border px-2 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.13em] transition ${
+                className={`rounded-md border px-1 py-2 font-mono text-[9px] font-semibold uppercase tracking-[0.13em] transition ${
+                  mobilePane === "dashboard"
+                    ? "border-border bg-surface-2 text-foreground"
+                    : "border-border/80 bg-surface-1 text-muted-foreground hover:border-border hover:bg-surface-2"
+                }`}
+                onClick={() => setMobilePane("dashboard")}
+              >
+                Dashboard
+              </button>
+              <button
+                type="button"
+                className={`rounded-md border px-1 py-2 font-mono text-[9px] font-semibold uppercase tracking-[0.13em] transition ${
                   mobilePane === "fleet"
                     ? "border-border bg-surface-2 text-foreground"
                     : "border-border/80 bg-surface-1 text-muted-foreground hover:border-border hover:bg-surface-2"
@@ -2641,7 +2681,7 @@ const AgentStudioPage = () => {
               </button>
               <button
                 type="button"
-                className={`rounded-md border px-2 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.13em] transition ${
+                className={`rounded-md border px-1 py-2 font-mono text-[9px] font-semibold uppercase tracking-[0.13em] transition ${
                   mobilePane === "chat"
                     ? "border-border bg-surface-2 text-foreground"
                     : "border-border/80 bg-surface-1 text-muted-foreground hover:border-border hover:bg-surface-2"
@@ -2678,6 +2718,17 @@ const AgentStudioPage = () => {
               >
                 Brain
               </button>
+              <button
+                type="button"
+                className={`rounded-md border px-2 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.13em] transition ${
+                  mobilePane === "flow"
+                    ? "border-border bg-surface-2 text-foreground"
+                    : "border-border/80 bg-surface-1 text-muted-foreground hover:border-border hover:bg-surface-2"
+                }`}
+                onClick={() => setMobilePane("flow")}
+              >
+                Flow
+              </button>
             </div>
           </div>
           <div
@@ -2688,20 +2739,57 @@ const AgentStudioPage = () => {
               selectedAgentId={focusedAgent?.agentId ?? state.selectedAgentId}
               filter={focusFilter}
               onFilterChange={handleFocusFilterChange}
-              onCreateAgent={() => {
-                handleOpenCreateAgentModal();
+              onOpenPipeline={() => setPipelineModalOpen(true)}
+              onProjectClick={(projectId) => {
+                setSelectedProjectId(projectId);
+                setMobilePane("project");
               }}
-              createDisabled={status !== "connected" || createAgentBusy || state.loading}
-              createBusy={createAgentBusy}
               onSelectAgent={(agentId) => {
                 flushPendingDraft(focusedAgent?.agentId ?? null);
                 dispatch({ type: "selectAgent", agentId });
                 setMobilePane("chat");
               }}
+              collapsed={sidebarCollapsed}
+              onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
             />
           </div>
           <div
-            className={`${mobilePane === "chat" ? "flex" : "hidden"} min-h-0 flex-1 overflow-hidden rounded-md border border-border/80 bg-surface-1 xl:flex`}
+            className={`${mobilePane === "dashboard" ? "flex" : "hidden"} min-h-0 flex-1 overflow-hidden rounded-md border border-border/80 bg-surface-1`}
+            data-testid="dashboard-panel"
+          >
+            <MainDashboard
+              agents={state.agents}
+              onSelectProject={(projectId) => {
+                const projectAgents = state.agents.filter(
+                  (a) => (a as any).project === projectId || a.agentId.includes(projectId)
+                );
+                if (projectAgents.length > 0) {
+                  dispatch({ type: "selectAgent", agentId: projectAgents[0].agentId });
+                  setMobilePane("chat");
+                }
+              }}
+              onCreateAgent={() => {
+                setMobilePane("chat");
+                setCreateAgentModalOpen(true);
+              }}
+            />
+          </div>
+          <div
+            className={`${mobilePane === "project" ? "flex" : "hidden"} min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-border/80 bg-surface-1`}
+            data-testid="project-panel"
+          >
+            {selectedProjectId ? (
+              <ProjectDashboard
+                project={PROJECTS.find(p => p.id === selectedProjectId)!}
+                agents={state.agents.filter(a => (a as any).project === selectedProjectId || a.agentId.includes(selectedProjectId))}
+                onClose={() => setMobilePane("dashboard")}
+              />
+            ) : (
+              <p className="text-muted-foreground p-8">Select a project from the sidebar</p>
+            )}
+          </div>
+          <div
+            className={`${mobilePane === "chat" ? "flex" : "hidden"} min-h-0 flex-1 overflow-hidden rounded-md border border-border/80 bg-surface-1`}
             data-testid="focused-agent-panel"
           >
             {focusedAgent ? (
@@ -2846,8 +2934,15 @@ const AgentStudioPage = () => {
               />
             </div>
           ) : null}
+          <div
+            className={`${mobilePane === "flow" ? "flex" : "hidden"} min-h-0 flex-1 overflow-hidden`}
+            data-testid="workflow-flow-panel"
+          >
+            <AgentPipelinePanel />
+          </div>
         </div>
       </div>
+      <PipelineModal open={pipelineModalOpen} onClose={() => setPipelineModalOpen(false)} />
       {createAgentModalOpen ? (
         <AgentCreateModal
           key={suggestedCreateAgentName}

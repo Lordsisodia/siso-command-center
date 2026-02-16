@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "../../node_modules/react-mentions-ts/styles/tailwind.css";
 @import "./styles/markdown.css";
+@import "@xyflow/react/dist/style.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -61,46 +62,46 @@
 
 .dark {
   --radius: 0.6rem;
-  --background: #0f1419;
+  --background: #191919;
   --foreground: rgb(255 255 255 / 0.92);
-  --card: #151b22;
+  --card: #262626;
   --card-foreground: rgb(255 255 255 / 0.92);
-  --popover: #151b22;
+  --popover: #262626;
   --popover-foreground: rgb(255 255 255 / 0.92);
-  --primary: #2a7b85;
+  --primary: #f97316;
   --primary-foreground: rgb(255 255 255 / 0.96);
-  --secondary: #1b222c;
+  --secondary: #333333;
   --secondary-foreground: rgb(255 255 255 / 0.92);
-  --muted: #1b222c;
+  --muted: #333333;
   --muted-foreground: rgb(255 255 255 / 0.65);
-  --accent: #245e66;
+  --accent: #404040;
   --accent-foreground: rgb(255 255 255 / 0.92);
   --destructive: oklch(0.62 0.21 22);
   --destructive-foreground: rgb(255 255 255 / 0.96);
-  --border: rgb(255 255 255 / 0.06);
-  --input: #0d1117;
-  --ring: #3093a0;
+  --border: rgb(255 255 255 / 0.08);
+  --input: #1a1a1a;
+  --ring: #f97316;
   --chart-1: oklch(0.69 0.09 218);
   --chart-2: oklch(0.7 0.08 170);
   --chart-3: oklch(0.68 0.08 255);
   --chart-4: oklch(0.7 0.07 205);
   --chart-5: oklch(0.62 0.07 240);
-  --sidebar: #121820;
+  --sidebar: #1a1a1a;
   --sidebar-foreground: rgb(255 255 255 / 0.92);
-  --sidebar-primary: #2a7b85;
+  --sidebar-primary: #f97316;
   --sidebar-primary-foreground: rgb(255 255 255 / 0.96);
-  --sidebar-accent: #245e66;
+  --sidebar-accent: #404040;
   --sidebar-accent-foreground: rgb(255 255 255 / 0.92);
-  --sidebar-border: rgb(255 255 255 / 0.06);
-  --sidebar-ring: #3093a0;
-  --panel: #151b22;
-  --panel-border: rgb(255 255 255 / 0.06);
+  --sidebar-border: rgb(255 255 255 / 0.08);
+  --sidebar-ring: #f97316;
+  --panel: #262626;
+  --panel-border: rgb(255 255 255 / 0.08);
   --shadow-color: oklch(0.08 0.012 250);
   --shadow-opacity: 0.45;
-  --surface-0: #0f1419;
-  --surface-1: #151b22;
-  --surface-2: #1b222c;
-  --surface-3: #0d1117;
+  --surface-0: #191919;
+  --surface-1: #262626;
+  --surface-2: #333333;
+  --surface-3: #1a1a1a;
 }
 
 @theme inline {

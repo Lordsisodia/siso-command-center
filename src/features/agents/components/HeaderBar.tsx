@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { GatewayStatus } from "@/lib/gateway/GatewayClient";
-import { Brain, Plug } from "lucide-react";
+import { Brain, Plug, LayoutDashboard, Network } from "lucide-react";
 
 type HeaderBarProps = {
   status: GatewayStatus;
@@ -10,6 +10,13 @@ type HeaderBarProps = {
   brainFilesOpen: boolean;
   brainDisabled?: boolean;
   showConnectionSettings?: boolean;
+  onDashboardClick?: () => void;
+  dashboardOpen?: boolean;
+  onPipelineClick?: () => void;
+  pipelineOpen?: boolean;
+  activityOpen?: boolean;
+  onActivityToggle?: () => void;
+  activityCount?: number;
 };
 
 export const HeaderBar = ({
@@ -19,6 +26,13 @@ export const HeaderBar = ({
   brainFilesOpen,
   brainDisabled = false,
   showConnectionSettings = true,
+  onDashboardClick,
+  dashboardOpen = false,
+  onPipelineClick,
+  pipelineOpen = false,
+  activityOpen = false,
+  onActivityToggle,
+  activityCount = 0,
 }: HeaderBarProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -46,7 +60,7 @@ export const HeaderBar = ({
       <div className="grid items-center gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
         <div className="min-w-0">
           <p className="console-title text-2xl leading-none text-foreground sm:text-3xl">
-            OpenClaw Studio
+            SISO Command Center
           </p>
         </div>
 
@@ -60,6 +74,34 @@ export const HeaderBar = ({
             </span>
           ) : null}
           <ThemeToggle />
+          {onDashboardClick && (
+            <button
+              className={`flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition ${
+                dashboardOpen
+                  ? "border-border bg-surface-2 text-foreground"
+                  : "border-input/90 bg-surface-3 text-foreground hover:border-border hover:bg-surface-2"
+              }`}
+              type="button"
+              onClick={onDashboardClick}
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              Dashboard
+            </button>
+          )}
+          {onPipelineClick && (
+            <button
+              className={`flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition ${
+                pipelineOpen
+                  ? "border-border bg-surface-2 text-foreground"
+                  : "border-input/90 bg-surface-3 text-foreground hover:border-border hover:bg-surface-2"
+              }`}
+              type="button"
+              onClick={onPipelineClick}
+            >
+              <Network className="h-4 w-4" />
+              Pipeline
+            </button>
+          )}
           <button
             className={`flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition ${
               brainFilesOpen
