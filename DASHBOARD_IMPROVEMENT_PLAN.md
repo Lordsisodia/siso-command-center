@@ -254,11 +254,157 @@ Expanded Project:
 
 ---
 
+## Phase 1 Complete ✅
+
+| Feature | Status |
+|---------|--------|
+| Expandable project widgets | ✅ Done |
+| System Status widget | ✅ Done |
+| Notifications widget | ✅ Done |
+| Improved layout | ✅ Done |
+
+---
+
+## Phase 2: Enhanced Widgets (In Progress)
+
+### 2.1 Activity Timeline Widget
+- Unified activity feed across all projects
+- Filter by: agent, project, type (info/warning/error)
+- Time-based filtering (1h, 24h, 7d)
+- Click to navigate to agent
+
+### 2.2 Quick Actions Widget
+- One-click buttons for common actions:
+  - Run heartbeat on all agents
+  - Create new agent
+  - Restart failed agents
+  - Sync project data
+
+### 2.3 Task Queue Mini-Widget
+- Compact task overview in sidebar
+- Show: pending, running, completed counts
+- Click to expand full kanban
+
+### 2.4 Resource Monitor Widget
+- Real-time CPU/Memory graphs
+- Per-agent resource usage
+- Historical charts (sparklines)
+
+### 2.5 Time Range Selector
+- Global time filter: 1h, 24h, 7d, 30d
+- Affects all widgets consistently
+
+---
+
+## Phase 3: UX Polish
+
+### 3.1 Drag-and-Drop Widget Reordering
+- Use `@dnd-kit` or similar
+- Save layout to localStorage
+- Reset to default option
+
+### 3.2 Keyboard Shortcuts
+- `n` - New agent
+- `d` - Dashboard
+- `p` - Projects
+- `/` - Search
+- `esc` - Close modals
+
+### 3.3 Command Palette (⌘K)
+- Quick search across agents, projects, actions
+- Recent items
+- Fuzzy matching
+
+### 3.4 Dark/Light Theme Enhancements
+- Improved color consistency
+- Better contrast ratios
+- Smooth transitions
+
+---
+
+## Phase 4: Advanced Features
+
+### 4.1 Agent Health Scores
+- Calculate health based on:
+  - Success rate
+  - Error frequency
+  - Response time
+- Visual indicators (color-coded)
+
+### 4.2 Scheduled Tasks Preview
+- Show upcoming cron jobs
+- Next run times
+- Quick enable/disable
+
+### 4.3 Quick Chat Widget
+- Send message to any agent directly from dashboard
+- Start new session
+
+### 4.4 Agent Templates Panel
+- Browse/create agent templates
+- One-click agent creation
+
+---
+
+## Implementation Priority (Updated)
+
+| Priority | Widget | Effort | Status |
+|----------|--------|--------|--------|
+| P0 | Expandable projects | - | ✅ Done |
+| P0 | System Status | - | ✅ Done |
+| P0 | Notifications | - | ✅ Done |
+| P1 | Activity Timeline | 3h | Pending |
+| P1 | Quick Actions | 2h | Pending |
+| P1 | Task Queue Mini | 2h | Pending |
+| P2 | Time Range Selector | 1h | Pending |
+| P2 | Resource Monitor | 3h | Pending |
+| P2 | Drag-drop reordering | 4h | Pending |
+| P3 | Command Palette | 4h | Pending |
+| P3 | Agent Health Scores | 3h | Pending |
+| P3 | Quick Chat | 2h | Pending |
+
+---
+
+## Visual Reference - Phase 2 Layout
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│  Dashboard                              [1h|24h|7d|30d] [⌘K] [⚙]  │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌─────────────────────────────┐  ┌─────────────────────────────────┐ │
+│  │ ▼ BlackBox5 (4/8 running) │  │ ▼ Lumelle (2/5 running)        │ │
+│  │ ●●●●○○○○                   │  │ ●●○○○                          │ │
+│  ├─ Running: Agent1, Agent2  │  ├─ Running: E2E, Static        │ │
+│  │ [▶ Start] [■ Stop]        │  │ [▶ Start] [■ Stop]            │ │
+│  └─────────────────────────────┘  └─────────────────────────────────┘ │
+│                                                                         │
+│  ┌─────────────────────────────┐  ┌─────────────────────────────────┐ │
+│  │ ▼ SISO Internal (1/3)      │  │ [+ Add Project]               │ │
+│  │ ●○○                        │  │                                │ │
+│  └─────────────────────────────┘  └─────────────────────────────────┘ │
+│                                                                         │
+├────────────────────────────────────────────────────────────────────────┤
+│  QUICK ACTIONS                                                        │
+│  [▶ Run All Heartbeats] [✦ New Agent] [↻ Restart Failed] [⟳ Sync]  │
+├────────────────────────────────────────────────────────────────────────┤
+│  ACTIVITY TIMELINE         │  SYSTEM STATUS    │  TASK QUEUE        │
+│  • 5m ago: PR #247 merged  │  ● Gateway 95%   │  Pending: 12       │
+│  • 15m ago: Story done     │  ● VPS    OK     │  Running: 3        │
+│  • 30m ago: Tests passed   │  ● MacMini Online│  Done: 156          │
+│  [View All →]              │                   │  [View Kanban →]    │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## Next Steps
 
-1. **Start with Phase 1** - Make projects load dynamically
-2. **Then connect real agent data** - Remove mock agents
-3. **Add expand/collapse** - In-place widget expansion
-4. **Add system status widget** - Show gateway/VPS status
+**Ready to implement Phase 2:**
 
-Ready to implement? Let me know which phase to start with.
+1. **Activity Timeline Widget** - Unified activity feed
+2. **Quick Actions Bar** - One-click common actions  
+3. **Task Queue Mini** - Compact task overview
+4. **Time Range Selector** - Filter all widgets
+
+Which would you like me to tackle first?

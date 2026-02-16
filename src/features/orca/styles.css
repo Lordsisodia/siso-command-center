@@ -1,0 +1,183 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  
+  --font-sans: 'Rajdhani', sans-serif;
+  --font-mono: 'Share Tech Mono', monospace;
+
+  --radius: 0px;
+}
+
+:root {
+  --background: 220 13% 10%;
+  --foreground: 218 11% 65%;
+
+  --card: 220 13% 13%;
+  --card-foreground: 218 11% 80%;
+
+  --popover: 220 13% 13%;
+  --popover-foreground: 218 11% 80%;
+
+  --primary: 200 95% 75%;
+  --primary-foreground: 220 13% 10%;
+
+  --secondary: 350 85% 75%;
+  --secondary-foreground: 220 13% 10%;
+
+  --muted: 215 15% 25%;
+  --muted-foreground: 218 10% 50%;
+
+  --accent: 200 95% 75%;
+  --accent-foreground: 220 13% 10%;
+
+  --destructive: 350 60% 50%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 215 15% 20%;
+  --input: 215 15% 18%;
+  --ring: 200 95% 75%;
+
+  --radius: 0px;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+.hud-panel {
+  @apply bg-[#1a1c23]/90 border border-white/5 backdrop-blur-md relative shadow-lg;
+}
+
+.loop-canvas-bg {
+  background: radial-gradient(ellipse at center, rgba(22,24,29,1) 0%, rgba(10,12,15,1) 100%);
+}
+
+.hud-corner-tl::before {
+  content: '';
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: 8px;
+  height: 8px;
+  border-top: 1px solid hsl(var(--primary) / 0.5);
+  border-left: 1px solid hsl(var(--primary) / 0.5);
+}
+
+.hud-corner-tr::after {
+  content: '';
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  width: 8px;
+  height: 8px;
+  border-top: 1px solid hsl(var(--primary) / 0.5);
+  border-right: 1px solid hsl(var(--primary) / 0.5);
+}
+
+.hud-corner-bl::before {
+  content: '';
+  position: absolute;
+  bottom: 0px;
+  left: 0px;
+  width: 8px;
+  height: 8px;
+  border-bottom: 1px solid hsl(var(--primary) / 0.5);
+  border-left: 1px solid hsl(var(--primary) / 0.5);
+}
+
+.hud-corner-br::after {
+  content: '';
+  position: absolute;
+  bottom: 0px;
+  right: 0px;
+  width: 8px;
+  height: 8px;
+  border-bottom: 1px solid hsl(var(--primary) / 0.5);
+  border-right: 1px solid hsl(var(--primary) / 0.5);
+}
+
+.hud-text {
+  @apply font-mono uppercase tracking-widest text-[10px] text-muted-foreground;
+}
+
+.status-indicator {
+  @apply w-2 h-2 rounded-full bg-primary shadow-[0_0_10px_hsl(var(--primary))] animate-pulse;
+}
+
+@keyframes loop-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes loop-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+@keyframes wheel-turn {
+  0% { stroke-dashoffset: 251.2; }
+  100% { stroke-dashoffset: 0; }
+}
+
+@keyframes intervention-glow {
+  0%, 100% { box-shadow: 0 0 5px rgba(245, 158, 11, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.6); }
+}
+
+.loop-spinning {
+  animation: loop-spin var(--spin-duration, 2s) linear infinite;
+}
+
+.loop-pulsing {
+  animation: loop-pulse 2s ease-in-out infinite;
+}
+
+.wheel-animating {
+  animation: wheel-turn var(--wheel-duration, 3s) linear infinite;
+}
+
+.intervention-required {
+  animation: intervention-glow 1.5s ease-in-out infinite;
+}
+
+.autonomous-badge {
+  @apply bg-emerald-500/10 border border-emerald-500/30 text-emerald-400;
+}
+
+.intervention-badge {
+  @apply bg-amber-500/10 border border-amber-500/30 text-amber-400;
+}
+
+.speed-bar {
+  @apply h-1 rounded-full transition-all duration-300;
+}
+
+.speed-bar-fast { @apply bg-emerald-500; }
+.speed-bar-medium { @apply bg-amber-500; }
+.speed-bar-slow { @apply bg-red-500; }
