@@ -31,7 +31,7 @@ export function AgentVisualization({
   filter 
 }: AgentVisualizationProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -42,6 +42,8 @@ export function AgentVisualization({
   const MAX_ZOOM = 2;
 
   useEffect(() => {
+    if (!containerRef.current) return;
+    
     const updateDimensions = () => {
       if (containerRef.current) {
         setDimensions({
@@ -50,9 +52,12 @@ export function AgentVisualization({
         });
       }
     };
+    
+    const observer = new ResizeObserver(updateDimensions);
+    observer.observe(containerRef.current);
     updateDimensions();
-    window.addEventListener("resize", updateDimensions);
-    return () => window.removeEventListener("resize", updateDimensions);
+    
+    return () => observer.disconnect();
   }, []);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -97,16 +102,24 @@ export function AgentVisualization({
     }
   }, [agents, filter]);
 
+  // Responsive orbits based on container size
+  const orbitScale = useMemo(() => {
+    const minDim = Math.min(dimensions.width, dimensions.height);
+    if (minDim <= 0) return 1;
+    const maxRadius = (minDim / 2) - 80;
+    return Math.min(maxRadius / 440, 1);
+  }, [dimensions]);
+
   const agentPositions = useMemo<AgentPosition[]>(() => {
     const centerX = dimensions.width / 2;
     const centerY = dimensions.height / 2;
     
     const orbits: { domain: AgentDomain; radius: number }[] = [
-      { domain: "communications", radius: 130 },
-      { domain: "productivity", radius: 200 },
-      { domain: "research", radius: 280 },
-      { domain: "development", radius: 360 },
-      { domain: "automation", radius: 440 },
+      { domain: "communications", radius: 130 * orbitScale },
+      { domain: "productivity", radius: 200 * orbitScale },
+      { domain: "research", radius: 280 * orbitScale },
+      { domain: "development", radius: 360 * orbitScale },
+      { domain: "automation", radius: 440 * orbitScale },
     ];
     
     const result: AgentPosition[] = [];
@@ -134,7 +147,7 @@ export function AgentVisualization({
     });
     
     return result;
-  }, [filteredAgents, dimensions]);
+  }, [filteredAgents, dimensions, orbitScale]);
 
   const getStatusGlow = (status: AgentStatus) => {
     if (status === "active") return "shadow-[0_0_15px_rgba(34,197,94,0.4)]";
@@ -142,7 +155,7 @@ export function AgentVisualization({
     return "";
   };
 
-  const orbits = [130, 200, 280, 360, 440];
+  const orbits = [130, 200, 280, 360, 440].map(r => r * orbitScale);
 
   return (
     <div 

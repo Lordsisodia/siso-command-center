@@ -10,7 +10,7 @@ interface InterventionPanelProps {
 
 export function InterventionPanel({ interventions, onResolve }: InterventionPanelProps) {
   return (
-    <div className="hud-panel p-3 w-72 hud-corner-br">
+    <div className="hud-panel p-3 hud-corner-br shrink-0">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-400" />
@@ -23,7 +23,7 @@ export function InterventionPanel({ interventions, onResolve }: InterventionPane
         </span>
       </div>
 
-      <div className="space-y-2 max-h-64 overflow-y-auto">
+      <div className="space-y-2 max-h-48 lg:max-h-64 overflow-y-auto">
         {interventions.length === 0 ? (
           <p className="text-xs text-muted-foreground">No interventions pending</p>
         ) : (

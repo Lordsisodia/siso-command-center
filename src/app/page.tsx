@@ -1,19 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AgentChatPanel } from "@/features/agents/components/AgentChatPanel";
-import { AgentCreateModal } from "@/features/agents/components/AgentCreateModal";
+import { AgentChatPanel } from "@/features/fleet/components/AgentChatPanel";
+import { AgentCreateModal } from "@/features/fleet/components/AgentCreateModal";
 import {
   AgentBrainPanel,
   AgentSettingsPanel,
-} from "@/features/agents/components/AgentInspectPanels";
-import { FleetSidebar } from "@/features/agents/components/FleetSidebar";
-import { HeaderBar } from "@/features/agents/components/HeaderBar";
-import { ConnectionPanel } from "@/features/agents/components/ConnectionPanel";
-import { GatewayConnectScreen } from "@/features/agents/components/GatewayConnectScreen";
-import { EmptyStatePanel } from "@/features/agents/components/EmptyStatePanel";
-import { MainDashboard } from "@/features/dashboard/components/MainDashboard";
-import { ProjectDashboard } from "@/features/projects/components/ProjectDashboard";
+} from "@/features/fleet/components/AgentInspectPanels";
+import { FleetSidebar } from "@/features/fleet/components/FleetSidebar";
+import { HeaderBar } from "@/features/fleet/components/HeaderBar";
+import { ConnectionPanel } from "@/features/fleet/components/ConnectionPanel";
+import { GatewayConnectScreen } from "@/features/fleet/components/GatewayConnectScreen";
+import { EmptyStatePanel } from "@/features/fleet/components/EmptyStatePanel";
+import { MainDashboard } from "@/features/dashboard/MainDashboard";
+import { ProjectDashboard } from "@/features/dashboard/ProjectDashboard";
 import { OrcaDashboard } from "@/features/orca/components/OrcaDashboard";
 
 const PROJECTS: { id: string; name: string; color: string; colorClass: string; accentColor: string; accentGlow: string }[] = [
@@ -44,14 +44,14 @@ import {
   getSelectedAgent,
   type FocusFilter,
   useAgentStore,
-} from "@/features/agents/state/store";
+} from "@/features/fleet/state/store";
 import {
   buildSummarySnapshotPatches,
   type SummaryPreviewSnapshot,
   type SummaryStatusSnapshot,
-} from "@/features/agents/state/runtimeEventBridge";
-import type { AgentState } from "@/features/agents/state/store";
-import { createGatewayRuntimeEventHandler } from "@/features/agents/state/gatewayRuntimeEventHandler";
+} from "@/features/fleet/state/runtimeEventBridge";
+import type { AgentState } from "@/features/fleet/state/store";
+import { createGatewayRuntimeEventHandler } from "@/features/fleet/state/gatewayRuntimeEventHandler";
 import {
   type CronJobSummary,
   filterCronJobsForAgent,
@@ -78,57 +78,57 @@ import { readGatewayAgentExecApprovals, upsertGatewayAgentExecApprovals } from "
 import { buildAvatarDataUrl } from "@/lib/avatars/multiavatar";
 import { createStudioSettingsCoordinator } from "@/lib/studio/coordinator";
 import { resolveFocusedPreference } from "@/lib/studio/settings";
-import { applySessionSettingMutation } from "@/features/agents/state/sessionSettingsMutations";
+import { applySessionSettingMutation } from "@/features/fleet/state/sessionSettingsMutations";
 import {
   compileGuidedAgentCreation,
-} from "@/features/agents/creation/compiler";
-import type { AgentCreateModalSubmitPayload } from "@/features/agents/creation/types";
+} from "@/features/fleet/creation/compiler";
+import type { AgentCreateModalSubmitPayload } from "@/features/fleet/creation/types";
 import {
   applyPendingGuidedSetupForAgent,
   removePendingGuidedSetup,
   upsertPendingGuidedSetup,
-} from "@/features/agents/creation/recovery";
+} from "@/features/fleet/creation/recovery";
 import {
   normalizePendingGuidedSetupGatewayScope,
-} from "@/features/agents/creation/pendingSetupStore";
+} from "@/features/fleet/creation/pendingSetupStore";
 import {
   loadPendingGuidedSetupsForScope,
   persistPendingGuidedSetupsForScopeWhenLoaded,
-} from "@/features/agents/creation/pendingGuidedSetupSessionStorageLifecycle";
+} from "@/features/fleet/creation/pendingGuidedSetupSessionStorageLifecycle";
 import {
   applyGuidedAgentSetup,
   type AgentGuidedSetup,
-} from "@/features/agents/operations/createAgentOperation";
+} from "@/features/fleet/operations/createAgentOperation";
 import {
   resolveGuidedCreateCompletion,
   runGuidedCreateWorkflow,
   runGuidedRetryWorkflow,
-} from "@/features/agents/operations/guidedCreateWorkflow";
-import { applyPendingGuidedSetupRetryViaStudio } from "@/features/agents/operations/pendingGuidedSetupRetryOperation";
+} from "@/features/fleet/operations/guidedCreateWorkflow";
+import { applyPendingGuidedSetupRetryViaStudio } from "@/features/fleet/operations/pendingGuidedSetupRetryOperation";
 import {
   isGatewayDisconnectLikeError,
   type EventFrame,
 } from "@/lib/gateway/GatewayClient";
 import { fetchJson } from "@/lib/http";
-import { deleteAgentViaStudio } from "@/features/agents/operations/deleteAgentOperation";
-import { performCronCreateFlow } from "@/features/agents/operations/cronCreateOperation";
-import { sendChatMessageViaStudio } from "@/features/agents/operations/chatSendOperation";
-import { hydrateAgentFleetFromGateway } from "@/features/agents/operations/agentFleetHydration";
+import { deleteAgentViaStudio } from "@/features/fleet/operations/deleteAgentOperation";
+import { performCronCreateFlow } from "@/features/fleet/operations/cronCreateOperation";
+import { sendChatMessageViaStudio } from "@/features/fleet/operations/chatSendOperation";
+import { hydrateAgentFleetFromGateway } from "@/features/fleet/operations/agentFleetHydration";
 import {
   buildConfigMutationFailureMessage,
   resolveConfigMutationStatusLine,
   runConfigMutationWorkflow,
-} from "@/features/agents/operations/configMutationWorkflow";
-import { useConfigMutationQueue } from "@/features/agents/operations/useConfigMutationQueue";
+} from "@/features/fleet/operations/configMutationWorkflow";
+import { useConfigMutationQueue } from "@/features/fleet/operations/useConfigMutationQueue";
 import { isLocalGatewayUrl } from "@/lib/gateway/local-gateway";
 import { shouldAwaitDisconnectRestartForRemoteMutation } from "@/lib/gateway/gatewayReloadMode";
-import { useGatewayRestartBlock } from "@/features/agents/operations/useGatewayRestartBlock";
+import { useGatewayRestartBlock } from "@/features/fleet/operations/useGatewayRestartBlock";
 import { randomUUID } from "@/lib/uuid";
-import type { ExecApprovalDecision, PendingExecApproval } from "@/features/agents/approvals/types";
+import type { ExecApprovalDecision, PendingExecApproval } from "@/features/fleet/approvals/types";
 import {
   resolveExecApprovalEventEffects,
-} from "@/features/agents/approvals/execApprovalLifecycleWorkflow";
-import { resolveExecApprovalViaStudio } from "@/features/agents/approvals/execApprovalResolveOperation";
+} from "@/features/fleet/approvals/execApprovalLifecycleWorkflow";
+import { resolveExecApprovalViaStudio } from "@/features/fleet/approvals/execApprovalResolveOperation";
 import {
   mergePendingApprovalsForFocusedAgent,
   nextPendingApprovalPruneDelayMs,
@@ -137,33 +137,33 @@ import {
   removePendingApprovalById,
   removePendingApprovalByIdMap,
   upsertPendingApproval,
-} from "@/features/agents/approvals/pendingStore";
+} from "@/features/fleet/approvals/pendingStore";
 import {
   TRANSCRIPT_V2_ENABLED,
   logTranscriptDebugMetric,
-} from "@/features/agents/state/transcript";
+} from "@/features/fleet/state/transcript";
 import {
   buildLatestUpdatePatch,
   resolveLatestUpdateIntent,
   resolveLatestUpdateKind,
-} from "@/features/agents/operations/latestUpdateWorkflow";
+} from "@/features/fleet/operations/latestUpdateWorkflow";
 import {
   resolveSummarySnapshotIntent,
-} from "@/features/agents/operations/fleetLifecycleWorkflow";
+} from "@/features/fleet/operations/fleetLifecycleWorkflow";
 import {
   executeAgentReconcileCommands,
   runAgentReconcileOperation,
-} from "@/features/agents/operations/agentReconcileOperation";
+} from "@/features/fleet/operations/agentReconcileOperation";
 import {
   executeHistorySyncCommands,
   runHistorySyncOperation,
-} from "@/features/agents/operations/historySyncOperation";
+} from "@/features/fleet/operations/historySyncOperation";
 import {
   buildMutationSideEffectCommands,
   buildQueuedMutationBlock,
   resolveMutationStartGuard,
-} from "@/features/agents/operations/agentMutationLifecycleController";
-import { runPendingGuidedSetupAutoRetryViaStudio } from "@/features/agents/operations/pendingGuidedSetupAutoRetryOperation";
+} from "@/features/fleet/operations/agentMutationLifecycleController";
+import { runPendingGuidedSetupAutoRetryViaStudio } from "@/features/fleet/operations/pendingGuidedSetupAutoRetryOperation";
 import { WorkflowFlowPanel, WorkflowFlowPanelEmpty, AgentPipelinePanel } from "@/features/workflows";
 import { PipelineModal } from "@/features/workflows/components/PipelineModal";
 
@@ -2787,6 +2787,11 @@ const AgentStudioPage = () => {
                 setMobilePane("chat");
                 setCreateAgentModalOpen(true);
               }}
+              onSelectAgent={(agentId) => {
+                dispatch({ type: "selectAgent", agentId });
+                setMobilePane("chat");
+              }}
+              onOpenSettings={() => {}}
             />
           </div>
           <div

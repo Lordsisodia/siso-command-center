@@ -2,31 +2,6 @@
 
 A custom fork of OpenClaw Studio with enhanced sidebar and dashboard features for managing AI agents.
 
-## Features
-
-- **Enhanced Fleet Sidebar**
-  - Keyboard navigation (arrow keys + Enter)
-  - Pinned agents (persisted to localStorage)
-  - Collapsible sidebar with persisted state
-  - Quick status toggle (click to start/stop)
-  - Right-click context menu
-  - Multi-select mode for bulk actions
-  - Running/total agent counts per project
-  - Current task preview in agent cards
-  - Filter persistence (All/Running/Idle)
-
-- **Dashboard**
-  - Project widgets
-  - Global activity feed
-
-## Upstream
-
-This project is based on:
-- [grp06/openclaw-studio](https://github.com/grp06/openclaw-studio) - Original OpenClaw Studio
-- [lordsisodia/siso-command-center](https://github.com/Lordsisodia/siso-command-center) - This fork
-
-> Goal: Eventually merge improvements back to upstream OpenClaw Studio.
-
 ## Quick Start
 
 ```bash
@@ -35,6 +10,66 @@ npm run dev
 ```
 
 Open http://localhost:3000 and configure your Gateway URL and token.
+
+## Architecture
+
+See [docs/SISO_ARCHITECTURE.md](docs/SISO_ARCHITECTURE.md) for full architecture details.
+
+### Layer Overview
+
+```
+┌────────────────────────────────────────────┐
+│  UI Layer (src/features/, src/components) │
+│  - Custom dashboard, command palette       │
+├────────────────────────────────────────────┤
+│  Hooks Layer (src/lib/hooks)              │
+│  - useAgents, useModalState (our code)    │
+├────────────────────────────────────────────┤
+│  State Layer (src/features/agents/state)    │
+│  - AgentStore (from OpenClaw)              │
+├────────────────────────────────────────────┤
+│  Gateway Layer (src/lib/gateway)            │
+│  - WebSocket client (from OpenClaw - KEEP) │
+└────────────────────────────────────────────┘
+```
+
+## What's Custom vs From OpenClaw
+
+| Custom (Our Code) | From OpenClaw (Keep) |
+|-------------------|---------------------|
+| `src/lib/hooks/*` | `src/lib/gateway/*` |
+| `src/features/projects/*` | `src/features/agents/*` |
+| `src/features/dashboard/CommandPalette.tsx` | `src/app/page.tsx` |
+
+## Features
+
+### Enhanced Dashboard
+- Glassmorphism cards with gradients
+- Arc gauge resources (CPU, Memory, API)
+- Sparkline trend charts
+- Drag-and-drop Kanban board
+- Command palette (Cmd+K)
+- Floating action button
+
+### Fleet Management
+- Keyboard navigation
+- Pinned agents (persisted)
+- Collapsible sidebar
+- Quick status toggle
+- Project filtering
+
+## Deployment to Mac Mini
+
+```bash
+# Build and deploy
+git push origin main
+
+# On Mac Mini:
+git pull
+npm install
+npm run build
+npm start
+```
 
 ## Tech Stack
 

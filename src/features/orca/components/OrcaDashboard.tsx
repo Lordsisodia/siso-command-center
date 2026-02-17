@@ -5,7 +5,7 @@ import { AgentVisualization } from "./AgentVisualization";
 import { FleetHealthPanel } from "./FleetHealthPanel";
 import { InterventionPanel } from "./InterventionPanel";
 import { SwarmDashboard } from "./SwarmDashboard";
-import type { AgentState } from "@/features/agents/state/store";
+import type { AgentState } from "@/features/fleet/state/store";
 import { ClawAgent, Swarm, Intervention, FleetHealth, Machine, AgentDomain } from "../lib/types";
 import { 
   Activity, Filter, Layers, AlertTriangle, Zap
@@ -131,7 +131,7 @@ export function OrcaDashboard({ agents, onAgentClick }: OrcaDashboardProps) {
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="flex-1 relative">
+        <div className="flex-1 relative min-w-0">
           <AgentVisualization 
             agents={clawAgents}
             swarms={MOCK_SWARMS}
@@ -141,7 +141,7 @@ export function OrcaDashboard({ agents, onAgentClick }: OrcaDashboardProps) {
           />
         </div>
 
-        <div className="flex flex-col gap-2 p-2 border-l border-white/5">
+        <div className="flex flex-col gap-2 p-2 border-l border-white/5 w-64 lg:w-72 xl:w-80 shrink-0 overflow-y-auto">
           <FleetHealthPanel 
             fleetHealth={fleetHealth}
             machines={MOCK_MACHINES}

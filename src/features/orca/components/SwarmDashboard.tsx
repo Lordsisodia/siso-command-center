@@ -12,7 +12,7 @@ export function SwarmDashboard({ swarms, onSwarmClick }: SwarmDashboardProps) {
   const activeSwarms = swarms.filter(s => s.status === "active");
 
   return (
-    <div className="hud-panel p-3 w-72 hud-corner-br">
+    <div className="hud-panel p-3 hud-corner-br shrink-0">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Zap className="w-4 h-4 text-purple-400" />
@@ -25,7 +25,7 @@ export function SwarmDashboard({ swarms, onSwarmClick }: SwarmDashboardProps) {
         </span>
       </div>
 
-      <div className="space-y-2 max-h-64 overflow-y-auto">
+      <div className="space-y-2 max-h-48 lg:max-h-64 overflow-y-auto">
         {activeSwarms.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-4 text-center">
             <Users className="w-8 h-8 text-muted-foreground mb-2 opacity-50" />

@@ -22,7 +22,7 @@ export function FleetHealthPanel({ fleetHealth, machines }: FleetHealthPanelProp
     "bg-red-500/10 border-red-500/30";
 
   return (
-    <div className="hud-panel p-3 w-60 hud-corner-br">
+    <div className="hud-panel p-3 hud-corner-br shrink-0">
       <div className="flex items-center gap-2 mb-3">
         <Activity className={`w-4 h-4 ${healthColor}`} />
         <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
