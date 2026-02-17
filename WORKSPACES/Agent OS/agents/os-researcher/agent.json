@@ -1,0 +1,26 @@
+{
+  "id": "os-researcher",
+  "name": "OS Researcher",
+  "project": "Agent OS",
+  "workspace": "/Volumes/SISO-STORAGE-VAULT/SISO-VAULT/COMMAND-CENTER/WORKSPACES/Agent OS/agents/os-researcher",
+  "model": "zai/glm-4.7",
+  "tools": {
+    "alsoAllow": [
+      "group:web",
+      "group:fs",
+      "group:runtime"
+    ],
+    "deny": []
+  },
+  "sandbox": {
+    "mode": "non-main",
+    "workspaceAccess": "rw"
+  },
+  "description": "Researches operating system patterns and architectures for the Agent OS project. Identifies OS patterns relevant to autonomous agent systems and documents findings for the implementation team.",
+  "capabilities": [
+    "OS research",
+    "Pattern identification",
+    "Documentation",
+    "Team collaboration"
+  ]
+}

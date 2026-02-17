@@ -1,0 +1,64 @@
+# Research Pipeline - Project Data Organization
+
+**Date:** 2026-02-17
+**Purpose:** Organize Antfarm pipeline data for OpenClaw UI research
+
+---
+
+## Data Organization Strategy
+
+### Structure
+
+```
+SISO-RESEARCH-BASE/
+├── projects/                    # INPUT: Raw project repos
+│   └── openclaw-ui-projects/   # Your 14 OpenClaw command centers
+│
+├── objectives/                  # OUTPUT: Per-task analysis
+│   └── openclaw-ui-research/   # ← ANT FARM OUTPUT HERE
+│       ├── analysis.md
+│       ├── findings.md
+│       └── metadata.json
+│
+├── knowledge/                   # EXTRACTED: Reusable insights
+│   ├── tools/
+│   ├── patterns/
+│   └── integrations/
+│
+└── memory/                      # OUTPUT: Daily summaries
+    └── today.md
+```
+
+### Tagging Strategy
+
+Add metadata to each objective:
+
+```yaml
+# objectives/openclaw-ui-research/metadata.json
+{
+  "task": "Analyze OpenClaw UI projects",
+  "source": "antfarm-pipeline",
+  "tags": ["openclaw-ui", "command-center", "antfarm"],
+  "date": "2026-02-17",
+  "status": "complete"
+}
+```
+
+---
+
+## Where Antfarm Output Goes
+
+| Phase | Output Location | Tag |
+|-------|----------------|-----|
+| Raw analysis | `objectives/<task-name>/` | source: antfarm |
+| Extracted tools | `knowledge/tools/` | +tag: antfarm |
+| Extracted patterns | `knowledge/patterns/` | +tag: antfarm |
+| Daily summary | `memory/today.md` | - |
+
+---
+
+## Recommendation
+
+Put Antfarm output in `objectives/openclaw-ui-research/` with tags in metadata.json.
+
+This keeps it separate but searchable.

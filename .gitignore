@@ -1,0 +1,33 @@
+# Sensitive
+state/credentials/
+state/identity/
+*.env
+
+# Large binary files
+*.mp4
+*.mov
+*.zip
+*.tar.gz
+*.DS_Store
+
+# OpenClaw state (ephemeral)
+state/sessions/
+state/logs/
+openclaw/logs/
+
+# Backups (keep local only)
+backups/
+
+# Temp
+*.tmp
+*.swp
+
+# Session files (too large, regenerateable)
+**/sessions/
+**/.openclaw/
+
+# Nested git repos (keep separate)
+blackbox5/
+openclaw/
+openclaw-studio/
+state/workspace/

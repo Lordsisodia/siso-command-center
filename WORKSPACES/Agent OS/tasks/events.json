@@ -1,0 +1,56 @@
+{
+  "events": [
+    {
+      "id": "evt-001",
+      "timestamp": "2026-02-17T10:00:00Z",
+      "goalId": "goal-001",
+      "type": "created",
+      "actor": "human",
+      "message": "Created goal: Build Task System UI"
+    },
+    {
+      "id": "evt-002",
+      "timestamp": "2026-02-17T10:00:00Z",
+      "goalId": "goal-001",
+      "taskId": "task-001",
+      "type": "created",
+      "actor": "os-builder",
+      "message": "Created task: Define TypeScript data model"
+    },
+    {
+      "id": "evt-003",
+      "timestamp": "2026-02-17T10:30:00Z",
+      "goalId": "goal-001",
+      "taskId": "task-001",
+      "type": "completed",
+      "actor": "os-builder",
+      "message": "Completed: Created types.ts with all interfaces"
+    },
+    {
+      "id": "evt-004",
+      "timestamp": "2026-02-17T10:30:00Z",
+      "goalId": "goal-001",
+      "taskId": "task-002",
+      "type": "created",
+      "actor": "os-builder",
+      "message": "Created task: Create Zustand store"
+    },
+    {
+      "id": "evt-005",
+      "timestamp": "2026-02-17T21:00:00Z",
+      "goalId": "goal-001",
+      "taskId": "task-002",
+      "type": "started",
+      "actor": "os-builder",
+      "message": "Started task: Create Zustand store"
+    },
+    {
+      "id": "evt-006",
+      "timestamp": "2026-02-17T14:00:00Z",
+      "goalId": "goal-003",
+      "type": "created",
+      "actor": "human",
+      "message": "Created goal: CISO Command Center Theme"
+    }
+  ]
+}

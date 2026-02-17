@@ -1,0 +1,62 @@
+{
+  "goals": [
+    {
+      "id": "goal-001",
+      "title": "Build Task System UI",
+      "description": "Create a task management UI in OpenClaw Studio with goals, tasks, and steps",
+      "status": "active",
+      "priority": "high",
+      "createdAt": "2026-02-17T10:00:00Z",
+      "updatedAt": "2026-02-17T10:00:00Z",
+      "criteria": [
+        "Goals board renders in Studio",
+        "Agents can create and complete tasks",
+        "Real-time sync between agent writes and UI",
+        "Activity feed shows all events"
+      ],
+      "owner": "os-builder",
+      "project": "Agent OS",
+      "tags": ["studio", "ui", "tasks"],
+      "taskIds": ["task-001", "task-002", "task-003", "task-004", "task-005"],
+      "progress": 20
+    },
+    {
+      "id": "goal-002",
+      "title": "Set up Agent Memory System",
+      "description": "Implement persistent memory for agents using the memory hierarchy",
+      "status": "backlog",
+      "priority": "medium",
+      "createdAt": "2026-02-17T12:00:00Z",
+      "updatedAt": "2026-02-17T12:00:00Z",
+      "criteria": [
+        "Agents can read/write long-term memory",
+        "Daily memory files auto-created",
+        "Memory search across sessions"
+      ],
+      "owner": "os-builder",
+      "project": "Agent OS",
+      "tags": ["memory", "agents"],
+      "taskIds": [],
+      "progress": 0
+    },
+    {
+      "id": "goal-003",
+      "title": "CISO Command Center Theme",
+      "description": "Rebrand OpenClaw Studio with gray/orange theme per TASK-004",
+      "status": "ready",
+      "priority": "medium",
+      "createdAt": "2026-02-17T14:00:00Z",
+      "updatedAt": "2026-02-17T14:00:00Z",
+      "criteria": [
+        "Gray/orange color scheme applied",
+        "Studio header matches CISO aesthetic",
+        "All components updated"
+      ],
+      "owner": "os-builder",
+      "project": "Agent OS",
+      "tags": ["studio", "theme"],
+      "taskIds": ["task-006"],
+      "progress": 0
+    }
+  ]
+}

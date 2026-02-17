@@ -1,0 +1,110 @@
+{
+  "tasks": [
+    {
+      "id": "task-001",
+      "goalId": "goal-001",
+      "title": "Define TypeScript data model",
+      "description": "Create interfaces for Goal, Task, Step, TaskEvent",
+      "status": "done",
+      "priority": "high",
+      "createdAt": "2026-02-17T10:00:00Z",
+      "updatedAt": "2026-02-17T10:30:00Z",
+      "completedAt": "2026-02-17T10:30:00Z",
+      "assignee": "os-builder",
+      "steps": [
+        { "text": "Define Goal interface", "done": true },
+        { "text": "Define Task interface", "done": true },
+        { "text": "Define Step interface", "done": true },
+        { "text": "Define TaskEvent interface", "done": true }
+      ],
+      "order": 1,
+      "result": "Created types.ts with all interfaces"
+    },
+    {
+      "id": "task-002",
+      "goalId": "goal-001",
+      "title": "Create Zustand store",
+      "description": "Build the task store with CRUD operations and computed getters",
+      "status": "active",
+      "priority": "high",
+      "createdAt": "2026-02-17T10:30:00Z",
+      "updatedAt": "2026-02-17T21:00:00Z",
+      "assignee": "os-builder",
+      "steps": [
+        { "text": "Define store interfaces", "done": true },
+        { "text": "Implement goal CRUD", "done": true },
+        { "text": "Implement task CRUD", "done": true },
+        { "text": "Add computed getters", "done": false },
+        { "text": "Add progress calculation", "done": false }
+      ],
+      "order": 2,
+      "context": "Need to integrate with the file sync utilities"
+    },
+    {
+      "id": "task-003",
+      "goalId": "goal-001",
+      "title": "Build GoalsBoard component",
+      "description": "Create the kanban-style board view for goals",
+      "status": "ready",
+      "priority": "medium",
+      "createdAt": "2026-02-17T11:00:00Z",
+      "updatedAt": "2026-02-17T11:00:00Z",
+      "steps": [
+        { "text": "Create GoalsBoard container", "done": false },
+        { "text": "Create GoalCard component", "done": false },
+        { "text": "Add drag-and-drop", "done": false },
+        { "text": "Style with current theme", "done": false }
+      ],
+      "order": 3
+    },
+    {
+      "id": "task-004",
+      "goalId": "goal-001",
+      "title": "Build GoalDetail view",
+      "description": "Create expanded view showing tasks and steps",
+      "status": "ready",
+      "priority": "medium",
+      "createdAt": "2026-02-17T11:30:00Z",
+      "updatedAt": "2026-02-17T11:30:00Z",
+      "steps": [
+        { "text": "Create task list component", "done": false },
+        { "text": "Add step checkboxes", "done": false },
+        { "text": "Show activity timeline", "done": false }
+      ],
+      "order": 4
+    },
+    {
+      "id": "task-005",
+      "goalId": "goal-001",
+      "title": "Wire up file sync",
+      "description": "Connect store to JSON files with polling",
+      "status": "backlog",
+      "priority": "high",
+      "createdAt": "2026-02-17T12:00:00Z",
+      "updatedAt": "2026-02-17T12:00:00Z",
+      "steps": [
+        { "text": "Read JSON files on load", "done": false },
+        { "text": "Write on every change", "done": false },
+        { "text": "Add polling for agent writes", "done": false },
+        { "text": "Handle conflicts gracefully", "done": false }
+      ],
+      "order": 5
+    },
+    {
+      "id": "task-006",
+      "goalId": "goal-003",
+      "title": "Apply gray/orange theme",
+      "description": "Update Studio UI colors to match CISO Command Center",
+      "status": "ready",
+      "priority": "medium",
+      "createdAt": "2026-02-17T14:00:00Z",
+      "updatedAt": "2026-02-17T14:00:00Z",
+      "steps": [
+        { "text": "Update color tokens", "done": false },
+        { "text": "Style header component", "done": false },
+        { "text": "Update all buttons/inputs", "done": false }
+      ],
+      "order": 1
+    }
+  ]
+}

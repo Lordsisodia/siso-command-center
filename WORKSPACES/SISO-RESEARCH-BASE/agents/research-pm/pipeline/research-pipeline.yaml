@@ -1,0 +1,209 @@
+# Research Pipeline - Full Configuration
+
+id: research-pipeline
+name: Research Pipeline
+description: Automated research analysis across SISO projects
+
+# Workspace root - where all data lives
+workspace:
+  root: /Volumes/SISO-STORAGE-VAULT/SISO-VAULT/COMMAND-CENTER/WORKSPACES/SISO-RESEARCH-BASE
+
+agents:
+  # ─────────────────────────────────────────────────────────
+  # Agent 1: Researcher - Finds and catalogs projects
+  # ─────────────────────────────────────────────────────────
+  - id: researcher
+    name: Researcher
+    description: Scan projects folder, identify repositories and tools
+    workspace: /projects
+    system_prompt: |
+      You are a research agent that catalogs AI/agent projects.
+      
+      WORKSPACE: /Volumes/SISO-STORAGE-VAULT/SISO-VAULT/COMMAND-CENTER/WORKSPACES/SISO-RESEARCH-BASE/projects
+      
+      Your job:
+      1. List all folders in the workspace
+      2. For each project, find: README.md, package.json, requirements.txt, config files
+      3. Extract: project name, description, tools used, dependencies
+      4. Report STATUS: done with FINDINGS: <list of projects and their details>
+      
+      Output format:
+      - project-name: <name>
+        description: <from README>
+        tools: [<list of tools from deps>]
+        path: <relative path>
+    expects: STATUS: done
+    timeout: 3600
+
+  # ─────────────────────────────────────────────────────────
+  # Agent 2: Analyzer - Deep analysis of each project
+  # ─────────────────────────────────────────────────────────
+  - id: analyzer
+    name: Analyzer
+    description: Deep dive into each project's code and architecture
+    workspace: /objectives
+    system_prompt: |
+      You are an analysis agent that performs deep analysis of AI/agent projects.
+      
+      WORKSPACE: /Volumes/SISO-STORAGE-VAULT/SISO-VAULT/COMMAND-CENTER/WORKSPACES/SISO-RESEARCH-Base
+      
+      Your job:
+      1. Read each project's key files (README.md, main config)
+      2. Analyze: architecture, patterns, integrations, techniques
+      3. Score relevance: 1-10 (how useful for SISO)
+      4. Categorize: agent-os, command-center, tooling, internal
+      
+      Output to: objectives/<project-name>/
+      - analysis.md: Full analysis
+      - score.md: Relevance score
+      - category.md: Project category
+      
+      Report STATUS: done with ANALYSIS: <summary>
+    expects: STATUS: done
+    timeout: 3600
+
+  # ─────────────────────────────────────────────────────────
+  # Agent 3: Extractor - Pull actionable insights
+  # ─────────────────────────────────────────────────────────
+  - id: extractor
+    name: Extractor
+    description: Extract tools, techniques, patterns into knowledge base
+    workspace: /knowledge
+    system_prompt: |
+      You are an extraction agent that pulls actionable insights from analysis.
+      
+      WORKSPACE: /Volumes/SISO-STORAGE-VAULT/SISO-VAULT/COMMAND-CENTER/WORKSPACES/SISO-RESEARCH-Base
+      
+      Your job:
+      1. Read analysis from objectives/<project>/
+      2. Extract: tools, techniques, patterns, integrations
+      3. Route to correct knowledge category
+      
+      Output to: knowledge/<category>/
+      - tools/: Extract tool names and use cases
+      - patterns/: Extract architectural patterns
+      - integrations/: Extract integration methods
+      
+      Flag critical findings (score 8+) with 🔴
+      Report STATUS: done with EXTRACTED: <list>
+    expects: STATUS: done
+    timeout: 1800
+
+  # ─────────────────────────────────────────────────────────
+  # Agent 4: Synthesizer - Create daily summary
+  # ─────────────────────────────────────────────────────────
+  - id: synthesizer
+    name: Synthesizer
+    description: Compile final reports and update memory
+    workspace: /memory
+    system_prompt: |
+      You are a synthesis agent that creates daily reports.
+      
+      WORKSPACE: /Volumes/SISO-STORAGE-VAULT/SISO-VAULT/COMMAND-CENTER/WORKSPACES/SISO-RESEARCH-Base
+      
+      Your job:
+      1. Read extracted knowledge from knowledge/
+      2. Synthesize into daily summary
+      3. Update memory
+      
+      Output to: memory/today.md
+      - Projects analyzed: <count>
+      - Key tools found: <list>
+      - Key patterns: <list>
+      - Action items: <list>
+      
+      Also create: memory/YYYY-MM-DD.md for archive
+      Report STATUS: done with SYNTHESIS: <report>
+    expects: STATUS: done
+    timeout: 900
+
+# ─────────────────────────────────────────────────────────
+# Workflow Steps - Execution Order
+# ─────────────────────────────────────────────────────────
+steps:
+  - id: scan
+    agent: researcher
+    description: Scan and catalog all projects
+    input: |
+      Task: Scan /projects folder for all AI/agent projects
+      
+      List every folder in the workspace.
+      For each project, find and read:
+      - README.md
+      - package.json or requirements.txt
+      - config files
+      
+      Return STATUS: done and FINDINGS: <JSON array of projects>
+    
+  - id: analyze
+    agent: analyzer
+    description: Deep analysis of each project
+    input: |
+      Task: Analyze each project found by researcher
+      
+      For each project in {{scan.findings}}:
+      1. Read project README and key files
+      2. Analyze architecture and patterns
+      3. Score relevance (1-10)
+      4. Categorize (agent-os, command-center, tooling, internal)
+      
+      Write to: objectives/<project-name>/
+      - analysis.md
+      - score.md
+      
+      Return STATUS: done and ANALYSIS: <summary>
+
+  - id: extract
+    agent: extractor
+    description: Extract tools and patterns to knowledge base
+    input: |
+      Task: Extract actionable insights from analysis
+      
+      Read all analysis from objectives/
+      For each analysis:
+      1. Extract tool names → knowledge/tools/
+      2. Extract patterns → knowledge/patterns/
+      3. Extract integrations → knowledge/integrations/
+      
+      Flag 🔴 for score 8+
+      
+      Return STATUS: done and EXTRACTED: <list>
+
+  - id: synthesize
+    agent: synthesizer
+    description: Create daily summary
+    input: |
+      Task: Synthesize all findings into daily report
+      
+      Read knowledge/
+      Create memory/today.md with:
+      - Projects analyzed
+      - Key tools found
+      - Key patterns discovered
+      - Recommended actions
+      
+      Return STATUS: done and SYNTHESIS: <report>
+
+# ─────────────────────────────────────────────────────────
+# Verification Gates - Quality Checks
+# ─────────────────────────────────────────────────────────
+verification:
+  - step: scan
+    checks:
+      - finding_count >= 1
+      - no_error_in_output
+      
+  - step: analyze
+    checks:
+      - analysis_count >= scan.findings.count
+      - all_scored
+      
+  - step: extract
+    checks:
+      - extraction_count >= 1
+      - no_duplicates
+      
+  - step: synthesize
+    checks:
+      - report_generated
+      - memory_updated

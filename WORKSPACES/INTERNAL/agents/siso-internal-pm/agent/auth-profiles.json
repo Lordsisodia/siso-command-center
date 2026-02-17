@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "profiles": {
+    "qwen-portal:qwen-cli": {
+      "type": "oauth",
+      "provider": "qwen-portal",
+      "access": "kuZJU2DNz0AY5-Cg8GWi_ELUv3M001mExli0x0DWomBr9B_TVT_cU4gLmuNeKZNauDOqUIav3unmAQiOkF8uzA",
+      "refresh": "v-GBdQAy1aVLMiD9zRQWlPL7kTneAsL9jX7_AkedV0HNG6Nbtbnp198tJvZPzDZ7mhP8exVllSU9m5R-t1nF9w",
+      "expires": 1755078855793
+    }
+  }
+}
