@@ -31,3 +31,5 @@ blackbox5/
 openclaw/
 openclaw-studio/
 state/workspace/
+state/
+auto-commit.sh
