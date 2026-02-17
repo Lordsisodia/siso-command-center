@@ -1,6 +1,6 @@
 # SISO Command Center
 
-A custom fork of OpenClaw Studio with enhanced sidebar and dashboard features for managing AI agents.
+A custom fork of OpenClaw Studio with enhanced UI for managing AI agents.
 
 ## Quick Start
 
@@ -9,78 +9,34 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000 and configure your Gateway URL and token.
+Open http://localhost:3000
 
-## Architecture
+## Documentation
 
-See [docs/SISO_ARCHITECTURE.md](docs/SISO_ARCHITECTURE.md) for full architecture details.
+| Doc | Purpose |
+|-----|---------|
+| [docs/AGENT_HANDOFF.md](docs/AGENT_HANDOFF.md) | AI Agent quick start |
+| [docs/COMPLETE_DOCUMENTATION.md](docs/COMPLETE_DOCUMENTATION.md) | Full documentation |
+| [docs/SISO_ARCHITECTURE.md](docs/SISO_ARCHITECTURE.md) | Architecture details |
 
-### Layer Overview
+## Directory Structure
 
 ```
-┌────────────────────────────────────────────┐
-│  UI Layer (src/features/, src/components) │
-│  - Custom dashboard, command palette       │
-├────────────────────────────────────────────┤
-│  Hooks Layer (src/lib/hooks)              │
-│  - useAgents, useModalState (our code)    │
-├────────────────────────────────────────────┤
-│  State Layer (src/features/agents/state)    │
-│  - AgentStore (from OpenClaw)              │
-├────────────────────────────────────────────┤
-│  Gateway Layer (src/lib/gateway)            │
-│  - WebSocket client (from OpenClaw - KEEP) │
-└────────────────────────────────────────────┘
+src/
+├── features/dashboard/   ← YOUR CODE: Dashboard views
+├── features/fleet/      ← FROM OPENCLAW: Agent management
+├── ui/charts/          ← YOUR CODE: Charts
+├── hooks/              ← YOUR CODE: React hooks
+└── lib/gateway/        ← FROM OPENCLAW: WebSocket
 ```
 
-## What's Custom vs From OpenClaw
+## Key Commands
 
-| Custom (Our Code) | From OpenClaw (Keep) |
-|-------------------|---------------------|
-| `src/lib/hooks/*` | `src/lib/gateway/*` |
-| `src/features/projects/*` | `src/features/agents/*` |
-| `src/features/dashboard/CommandPalette.tsx` | `src/app/page.tsx` |
-
-## Features
-
-### Enhanced Dashboard
-- Glassmorphism cards with gradients
-- Arc gauge resources (CPU, Memory, API)
-- Sparkline trend charts
-- Drag-and-drop Kanban board
-- Command palette (Cmd+K)
-- Floating action button
-
-### Fleet Management
-- Keyboard navigation
-- Pinned agents (persisted)
-- Collapsible sidebar
-- Quick status toggle
-- Project filtering
-
-## Deployment to Mac Mini
-
-```bash
-# Build and deploy
-git push origin main
-
-# On Mac Mini:
-git pull
-npm install
-npm run build
-npm start
-```
-
-## Tech Stack
-
-- Next.js 16
-- TypeScript
-- Tailwind CSS
-- WebSocket (OpenClaw Gateway)
-
-## License
-
-MIT
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Dev server |
+| `npm run build` | Production build |
+| `npm test` | Run tests |
 
 ## Planned Integrations
 
